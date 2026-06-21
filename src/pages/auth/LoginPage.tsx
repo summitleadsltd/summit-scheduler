@@ -30,11 +30,13 @@ export function LoginPage() {
 
   if (profile) {
     const route =
-      profile.role === 'manager'
-        ? '/manager/dashboard'
-        : profile.role === 'scheduler'
-          ? '/scheduler/dashboard'
-          : '/technician/dashboard';
+      profile.role === 'admin'
+        ? '/admin/dashboard'
+        : profile.role === 'manager'
+          ? '/manager/dashboard'
+          : profile.role === 'scheduler'
+            ? '/scheduler/dashboard'
+            : '/technician/dashboard';
     return <Navigate to={route} replace />;
   }
 

@@ -76,6 +76,10 @@ export function useRole(): UserRole | null {
   return useAuthStore((s) => s.profile?.role ?? null);
 }
 
+export function useIsAdmin(): boolean {
+  return useAuthStore((s) => s.profile?.role === 'admin');
+}
+
 export function useIsManager(): boolean {
   return useAuthStore((s) => s.profile?.role === 'manager');
 }

@@ -29,15 +29,21 @@ import { SchedulerManagement } from '@/pages/manager/SchedulerManagement';
 import { ReportsPage } from '@/pages/manager/ReportsPage';
 import { SettingsPage } from '@/pages/manager/SettingsPage';
 
+// Admin
+import { AdminDashboard } from '@/pages/admin/AdminDashboard';
+import { UserManagement } from '@/pages/admin/UserManagement';
+
 function AppRoutes() {
   const { profile } = useAuthStore();
 
   const defaultRoute = profile
-    ? profile.role === 'manager'
-      ? '/manager/dashboard'
-      : profile.role === 'scheduler'
-        ? '/scheduler/dashboard'
-        : '/technician/dashboard'
+    ? profile.role === 'admin'
+      ? '/admin/dashboard'
+      : profile.role === 'manager'
+        ? '/manager/dashboard'
+        : profile.role === 'scheduler'
+          ? '/scheduler/dashboard'
+          : '/technician/dashboard'
     : '/login';
 
   return (
@@ -88,6 +94,23 @@ function AppRoutes() {
         <Route path="/manager/customers" element={<CustomersPage />} />
         <Route path="/manager/reports" element={<ReportsPage />} />
         <Route path="/manager/settings" element={<SettingsPage />} />
+      </Route>
+
+      {/* Admin Portal */}
+      <Route
+        element={
+          <AuthGuard allowedRoles={['admin']}>
+            <AppLayout />
+          </AuthGuard>
+        }
+      >
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<UserManagement />} />
+        <Route path="/admin/dispatch" element={<DispatchBoard />} />
+        <Route path="/admin/calendar" element={<ManagerCalendar />} />
+        <Route path="/admin/customers" element={<CustomersPage />} />
+        <Route path="/admin/reports" element={<ReportsPage />} />
+        <Route path="/admin/settings" element={<SettingsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to={defaultRoute} replace />} />

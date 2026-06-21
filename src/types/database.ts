@@ -1,4 +1,4 @@
-export type UserRole = 'manager' | 'scheduler' | 'technician';
+export type UserRole = 'admin' | 'manager' | 'scheduler' | 'technician';
 
 export type AppointmentStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
