@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 const adminLinks = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/users', label: 'User Management', icon: Users },
+  { to: '/admin/booking', label: 'Create Booking', icon: UserPlus },
   { to: '/admin/dispatch', label: 'Dispatch Board', icon: Columns3 },
   { to: '/admin/calendar', label: 'Calendar', icon: Calendar },
   { to: '/admin/customers', label: 'Customers', icon: BookOpen },
@@ -33,6 +34,7 @@ const adminLinks = [
 
 const managerLinks = [
   { to: '/manager/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/manager/booking', label: 'Create Booking', icon: UserPlus },
   { to: '/manager/dispatch', label: 'Dispatch Board', icon: Columns3 },
   { to: '/manager/calendar', label: 'Calendar', icon: Calendar },
   { to: '/manager/technicians', label: 'Technicians', icon: Users },

@@ -100,6 +100,7 @@ function AppRoutes() {
         }
       >
         <Route path="/manager/dashboard" element={<ManagerDashboard />} />
+        <Route path="/manager/booking" element={<CreateBooking />} />
         <Route path="/manager/dispatch" element={<DispatchBoard />} />
         <Route path="/manager/calendar" element={<ManagerCalendar />} />
         <Route path="/manager/technicians" element={<TechnicianManagement />} />
@@ -121,6 +122,7 @@ function AppRoutes() {
       >
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<UserManagement />} />
+        <Route path="/admin/booking" element={<CreateBooking />} />
         <Route path="/admin/dispatch" element={<DispatchBoard />} />
         <Route path="/admin/calendar" element={<ManagerCalendar />} />
         <Route path="/admin/customers" element={<CustomersPage />} />

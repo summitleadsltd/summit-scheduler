@@ -18,7 +18,7 @@ const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({
-    business_hours_start: '08:00',
+    business_hours_start: '09:00',
     business_hours_end: '17:00',
     default_appointment_duration: 60,
     working_days: [1, 2, 3, 4, 5],

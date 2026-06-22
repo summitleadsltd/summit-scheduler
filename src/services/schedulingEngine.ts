@@ -1,10 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import { getRoute } from './geocodingService';
 import type { SchedulingSlot, Appointment, AvailabilityBlock, User } from '@/types/database';
-import { addMinutes, startOfDay, endOfDay, parseISO, isAfter, isBefore, format, addDays } from 'date-fns';
+import { addMinutes, startOfDay, endOfDay, parseISO, isAfter, isBefore, format, addDays, getDay } from 'date-fns';
+import { toEST } from '@/lib/timezone';
 
 const DEFAULT_DURATION = 60; // minutes
-const BUSINESS_START_HOUR = 8;
+const BUSINESS_START_HOUR = 9;
 const BUSINESS_END_HOUR = 17;
 const SLOT_INCREMENT = 30; // minutes
 const DAYS_AHEAD = 5;
@@ -31,7 +32,7 @@ export async function findBestSlots(
   if (!technicians || technicians.length === 0) return [];
 
   // 2. Date range to search
-  const now = new Date();
+  const now = toEST(new Date());
   const searchStart = isAfter(now, startOfBusinessDay(now))
     ? now
     : startOfBusinessDay(now);
@@ -101,6 +102,13 @@ async function findTechnicianSlots(
   // Iterate through each day
   let currentDay = startOfDay(searchStart);
   while (isBefore(currentDay, searchEnd)) {
+    // Skip weekends (0 = Sunday, 6 = Saturday)
+    const dayOfWeek = getDay(currentDay);
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      currentDay = addDays(currentDay, 1);
+      continue;
+    }
+
     const dayStart = startOfBusinessDay(currentDay);
     const dayEnd = endOfBusinessDay(currentDay);
 

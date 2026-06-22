@@ -6,7 +6,6 @@ import {
   PlusCircle,
   MapPin,
   Bell,
-  Users,
   Columns3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -33,7 +32,7 @@ export function MobileNav() {
       case 'admin':
         return [
           { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
-          { to: `${prefix}/users`, label: 'Users', icon: Users },
+          { to: `${prefix}/booking`, label: 'Book', icon: PlusCircle },
           { to: `${prefix}/dispatch`, label: 'Dispatch', icon: Columns3 },
           { to: `${prefix}/calendar`, label: 'Calendar', icon: Calendar },
           { to: `${prefix}/notifications`, label: 'Alerts', icon: Bell, badge: unreadCount },
@@ -41,9 +40,9 @@ export function MobileNav() {
       case 'manager':
         return [
           { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
-          { to: `${prefix}/dispatch`, label: 'Dispatch', icon: Columns3 },
+          { to: `${prefix}/booking`, label: 'Book', icon: PlusCircle },
           { to: `${prefix}/calendar`, label: 'Calendar', icon: Calendar },
-          { to: `${prefix}/technicians`, label: 'Techs', icon: Users },
+          { to: `${prefix}/dispatch`, label: 'Dispatch', icon: Columns3 },
           { to: `${prefix}/notifications`, label: 'Alerts', icon: Bell, badge: unreadCount },
         ];
       case 'scheduler':
