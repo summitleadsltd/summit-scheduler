@@ -43,6 +43,10 @@ import { UserManagement } from '@/pages/admin/UserManagement';
 import { NotificationCenter } from '@/pages/shared/NotificationCenter';
 import { AccountSettings } from '@/pages/shared/AccountSettings';
 
+// Legal
+import { PrivacyPolicy } from '@/pages/legal/PrivacyPolicy';
+import { TermsOfService } from '@/pages/legal/TermsOfService';
+
 function AppRoutes() {
   const { profile } = useAuthStore();
 
@@ -60,6 +64,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallback />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
 
       {/* Technician Portal */}
       <Route
