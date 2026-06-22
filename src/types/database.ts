@@ -80,7 +80,9 @@ export interface DeviceToken {
   id: string;
   user_id: string;
   token: string;
+  platform: 'web' | 'android' | 'ios';
   created_at: string;
+  updated_at: string;
 }
 
 export interface BusinessSettings {

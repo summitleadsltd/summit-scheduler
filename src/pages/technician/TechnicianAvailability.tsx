@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { AvailabilityBlock } from '@/types/database';
 
 export function TechnicianAvailability() {
@@ -166,8 +166,8 @@ export function TechnicianAvailability() {
                   <div>
                     <p className="font-medium text-sm capitalize">{block.reason}</p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(block.start_time), 'MMM d, yyyy h:mm a')} -{' '}
-                      {format(new Date(block.end_time), 'MMM d, yyyy h:mm a')}
+                      {formatEST(block.start_time, 'MMM d, yyyy h:mm a')} -{' '}
+                      {formatEST(block.end_time, 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
                   <Button

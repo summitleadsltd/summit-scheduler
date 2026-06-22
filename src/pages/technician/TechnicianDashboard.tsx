@@ -5,7 +5,7 @@ import { StatCard } from '@/components/shared/StatCard';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, CheckCircle, MapPin } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { Appointment } from '@/types/database';
 
 export function TechnicianDashboard() {
@@ -66,8 +66,8 @@ export function TechnicianDashboard() {
                         {apt.customer?.first_name} {apt.customer?.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(apt.start_time), 'h:mm a')} -{' '}
-                        {format(new Date(apt.end_time), 'h:mm a')}
+                        {formatEST(apt.start_time, 'h:mm a')} -{' '}
+                        {formatEST(apt.end_time, 'h:mm a')}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {apt.address?.address_line}
@@ -97,7 +97,7 @@ export function TechnicianDashboard() {
                         {apt.customer?.first_name} {apt.customer?.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(apt.start_time), 'EEE, MMM d - h:mm a')}
+                        {formatEST(apt.start_time, 'EEE, MMM d - h:mm a')}
                       </p>
                     </div>
                     <AppointmentStatusBadge status={apt.status} />

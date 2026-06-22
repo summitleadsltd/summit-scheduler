@@ -9,7 +9,7 @@ import type { EventInput, EventClickArg } from '@fullcalendar/core';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
-import { format } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { Appointment } from '@/types/database';
 
 const statusColors: Record<string, string> = {
@@ -103,8 +103,8 @@ export function SchedulerCalendar() {
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Time</p>
                   <p className="font-medium">
-                    {format(new Date(selectedAppointment.start_time), 'MMM d, h:mm a')} -{' '}
-                    {format(new Date(selectedAppointment.end_time), 'h:mm a')}
+                    {formatEST(selectedAppointment.start_time, 'MMM d, h:mm a')} -{' '}
+                    {formatEST(selectedAppointment.end_time, 'h:mm a')}
                   </p>
                 </div>
                 <div className="col-span-2">

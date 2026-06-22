@@ -14,7 +14,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
 import { Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { Customer, Address, Appointment } from '@/types/database';
 
 export function CustomersPage() {
@@ -151,7 +151,7 @@ export function CustomersPage() {
                         <div>
                           <p className="text-sm font-medium capitalize">{apt.appointment_type}</p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(apt.start_time), 'MMM d, yyyy h:mm a')}
+                            {formatEST(apt.start_time, 'MMM d, yyyy h:mm a')}
                           </p>
                         </div>
                         <AppointmentStatusBadge status={apt.status} />

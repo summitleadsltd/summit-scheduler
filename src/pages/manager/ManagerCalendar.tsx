@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { Appointment, AppointmentStatus } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -123,8 +123,8 @@ export function ManagerCalendar() {
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Time</p>
                   <p className="font-medium">
-                    {format(new Date(selectedAppointment.start_time), 'MMM d, h:mm a')} -{' '}
-                    {format(new Date(selectedAppointment.end_time), 'h:mm a')}
+                    {formatEST(selectedAppointment.start_time, 'MMM d, h:mm a')} -{' '}
+                    {formatEST(selectedAppointment.end_time, 'h:mm a')}
                   </p>
                 </div>
                 <div className="col-span-2">

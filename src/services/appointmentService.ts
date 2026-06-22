@@ -108,6 +108,37 @@ export async function rescheduleAppointment(id: string, start_time: string, end_
   return data as Appointment;
 }
 
+export async function updateAppointment(id: string, update: {
+  start_time?: string;
+  end_time?: string;
+  appointment_type?: string;
+  notes?: string;
+  status?: AppointmentStatus;
+  technician_id?: string;
+}) {
+  const { data, error } = await supabase
+    .from('ss_appointments')
+    .update({ ...update, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select(`
+      *,
+      customer:ss_customers(*),
+      technician:ss_users!ss_appointments_technician_id_fkey(*),
+      address:ss_addresses(*)
+    `)
+    .single();
+  if (error) throw error;
+  return data as Appointment;
+}
+
+export async function deleteAppointment(id: string) {
+  const { error } = await supabase
+    .from('ss_appointments')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
 export async function getTodayAppointments(technicianId?: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

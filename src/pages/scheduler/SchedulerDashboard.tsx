@@ -5,7 +5,7 @@ import { StatCard } from '@/components/shared/StatCard';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Users, Clock, BookOpen } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { Appointment, User } from '@/types/database';
 
 export function SchedulerDashboard() {
@@ -66,7 +66,7 @@ export function SchedulerDashboard() {
                         {apt.customer?.first_name} {apt.customer?.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {apt.technician?.name} | {format(new Date(apt.start_time), 'h:mm a')}
+                        {apt.technician?.name} | {formatEST(apt.start_time, 'h:mm a')}
                       </p>
                     </div>
                     <AppointmentStatusBadge status={apt.status} />

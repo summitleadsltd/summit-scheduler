@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import { Star, MapPin, Clock, Search, CheckCircle } from 'lucide-react';
 import type { SchedulingSlot, Customer, Address } from '@/types/database';
 import { toast } from 'sonner';
@@ -153,7 +153,7 @@ export function CreateBooking() {
       await notifyNewAppointment(
         selectedSlot.technician_id,
         `${formData.first_name} ${formData.last_name}`,
-        format(new Date(selectedSlot.start_time), 'MMM d, h:mm a'),
+        formatEST(selectedSlot.start_time, 'MMM d, h:mm a'),
         appointment.id,
       );
 
@@ -182,7 +182,7 @@ export function CreateBooking() {
         <h2 className="text-2xl font-bold">Booking Confirmed!</h2>
         <p className="text-muted-foreground">
           Appointment has been scheduled with {selectedSlot?.technician_name} on{' '}
-          {selectedSlot && format(new Date(selectedSlot.start_time), 'EEEE, MMM d, yyyy at h:mm a')}
+          {selectedSlot && formatEST(selectedSlot.start_time, 'EEEE, MMM d, yyyy at h:mm a')}
         </p>
         <Button onClick={resetForm}>Create Another Booking</Button>
       </div>
@@ -220,7 +220,7 @@ export function CreateBooking() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-semibold">
-                    {format(new Date(slot.start_time), 'EEE, MMM d')}
+                    {formatEST(slot.start_time, 'EEE, MMM d')}
                   </p>
                   <div className="flex">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -234,7 +234,7 @@ export function CreateBooking() {
                   </div>
                 </div>
                 <p className="text-lg font-bold text-primary">
-                  {format(new Date(slot.start_time), 'h:mm a')}
+                  {formatEST(slot.start_time, 'h:mm a')}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">{slot.technician_name}</p>
                 <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">

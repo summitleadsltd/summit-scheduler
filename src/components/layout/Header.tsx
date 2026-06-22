@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceEST } from '@/lib/timezone';
 import { useEffect } from 'react';
 
 export function Header() {
@@ -69,7 +69,7 @@ export function Header() {
                     <p className="text-sm font-medium">{n.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">{n.body}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                      {formatDistanceEST(n.created_at, { addSuffix: true })}
                     </p>
                   </div>
                 ))

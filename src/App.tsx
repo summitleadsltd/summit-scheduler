@@ -4,6 +4,11 @@ import { Toaster } from '@/components/ui/sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthGuard } from '@/components/shared/AuthGuard';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useRegisterSW } from 'virtual:pwa-register/react';
+import { usePWAStore } from '@/stores/pwaStore';
+import { SplashScreen } from '@/components/pwa/SplashScreen';
+import { onForegroundMessage } from '@/lib/firebase';
+import { toast } from 'sonner';
 
 // Auth
 import { LoginPage } from '@/pages/auth/LoginPage';
@@ -32,6 +37,9 @@ import { SettingsPage } from '@/pages/manager/SettingsPage';
 // Admin
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
 import { UserManagement } from '@/pages/admin/UserManagement';
+
+// Shared
+import { NotificationCenter } from '@/pages/shared/NotificationCenter';
 
 function AppRoutes() {
   const { profile } = useAuthStore();
@@ -62,6 +70,7 @@ function AppRoutes() {
         <Route path="/technician/calendar" element={<TechnicianCalendar />} />
         <Route path="/technician/route" element={<TechnicianRouteMap />} />
         <Route path="/technician/availability" element={<TechnicianAvailability />} />
+        <Route path="/technician/notifications" element={<NotificationCenter />} />
       </Route>
 
       {/* Scheduler Portal */}
@@ -76,6 +85,7 @@ function AppRoutes() {
         <Route path="/scheduler/booking" element={<CreateBooking />} />
         <Route path="/scheduler/calendar" element={<SchedulerCalendar />} />
         <Route path="/scheduler/customers" element={<CustomersPage />} />
+        <Route path="/scheduler/notifications" element={<NotificationCenter />} />
       </Route>
 
       {/* Manager Portal */}
@@ -94,6 +104,7 @@ function AppRoutes() {
         <Route path="/manager/customers" element={<CustomersPage />} />
         <Route path="/manager/reports" element={<ReportsPage />} />
         <Route path="/manager/settings" element={<SettingsPage />} />
+        <Route path="/manager/notifications" element={<NotificationCenter />} />
       </Route>
 
       {/* Admin Portal */}
@@ -111,6 +122,7 @@ function AppRoutes() {
         <Route path="/admin/customers" element={<CustomersPage />} />
         <Route path="/admin/reports" element={<ReportsPage />} />
         <Route path="/admin/settings" element={<SettingsPage />} />
+        <Route path="/admin/notifications" element={<NotificationCenter />} />
       </Route>
 
       <Route path="*" element={<Navigate to={defaultRoute} replace />} />
@@ -120,20 +132,55 @@ function AppRoutes() {
 
 export default function App() {
   const { initialize, initialized } = useAuthStore();
+  const { setDeferredPrompt, setIsOnline, setNeedsUpdate, setUpdateSW } = usePWAStore();
+
+  const { updateServiceWorker } = useRegisterSW({
+    onNeedRefresh() {
+      setNeedsUpdate(true);
+    },
+    onOfflineReady() {
+      toast.info('App ready for offline use');
+    },
+  });
+
+  useEffect(() => {
+    setUpdateSW(() => updateServiceWorker(true));
+  }, [updateServiceWorker, setUpdateSW]);
 
   useEffect(() => {
     initialize();
   }, [initialize]);
 
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [setIsOnline]);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, [setDeferredPrompt]);
+
+  useEffect(() => {
+    onForegroundMessage((payload) => {
+      toast(payload.title ?? 'Notification', {
+        description: payload.body,
+      });
+    });
+  }, []);
+
   if (!initialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="text-muted-foreground">Loading Summit Scheduler...</p>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   return (
@@ -142,4 +189,9 @@ export default function App() {
       <Toaster />
     </BrowserRouter>
   );
+}
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }

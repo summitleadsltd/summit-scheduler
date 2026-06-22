@@ -5,6 +5,7 @@ import { StatCard } from '@/components/shared/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, Users, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, differenceInMinutes, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import { Progress } from '@/components/ui/progress';
 import type { Appointment, User } from '@/types/database';
 
@@ -77,7 +78,7 @@ export function ReportsPage() {
     const count = appointments.filter(
       (a) => format(new Date(a.start_time), 'yyyy-MM-dd') === dayStr,
     ).length;
-    return { day: format(day, 'EEE'), count };
+    return { day: formatEST(day, 'EEE'), count };
   });
 
   const maxDaily = Math.max(...dailyCounts.map((d) => d.count), 1);

@@ -4,7 +4,8 @@ import { getActiveTechnicians } from '@/services/technicianService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format, startOfDay, addDays } from 'date-fns';
+import { startOfDay, addDays } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { Appointment, User } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -113,11 +114,11 @@ export function DispatchBoard() {
                           <AppointmentStatusBadge status={apt.status} />
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(apt.start_time), 'EEE, MMM d')}
+                          {formatEST(apt.start_time, 'EEE, MMM d')}
                         </p>
                         <p className="text-xs text-primary font-medium">
-                          {format(new Date(apt.start_time), 'h:mm a')} -{' '}
-                          {format(new Date(apt.end_time), 'h:mm a')}
+                          {formatEST(apt.start_time, 'h:mm a')} -{' '}
+                          {formatEST(apt.end_time, 'h:mm a')}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1 capitalize">
                           {apt.appointment_type}
@@ -152,7 +153,7 @@ export function DispatchBoard() {
                         {apt.customer?.first_name} {apt.customer?.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(apt.start_time), 'EEE h:mm a')}
+                        {formatEST(apt.start_time, 'EEE h:mm a')}
                       </p>
                     </div>
                   ))}

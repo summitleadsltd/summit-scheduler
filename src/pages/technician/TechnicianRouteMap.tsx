@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { getTodayAppointments } from '@/services/appointmentService';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { Appointment } from '@/types/database';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -84,7 +84,7 @@ export function TechnicianRouteMap() {
                             {apt.customer?.first_name} {apt.customer?.last_name}
                           </strong>
                           <br />
-                          {format(new Date(apt.start_time), 'h:mm a')}
+                          {formatEST(apt.start_time, 'h:mm a')}
                           <br />
                           {apt.address.address_line}
                         </div>
@@ -119,8 +119,8 @@ export function TechnicianRouteMap() {
                         {apt.customer?.first_name} {apt.customer?.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(apt.start_time), 'h:mm a')} -{' '}
-                        {format(new Date(apt.end_time), 'h:mm a')}
+                        {formatEST(apt.start_time, 'h:mm a')} -{' '}
+                        {formatEST(apt.end_time, 'h:mm a')}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {apt.address?.address_line}

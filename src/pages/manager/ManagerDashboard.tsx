@@ -4,7 +4,8 @@ import { getActiveTechnicians } from '@/services/technicianService';
 import { StatCard } from '@/components/shared/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Users, TrendingUp, BarChart3 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth } from 'date-fns';
+import { formatEST } from '@/lib/timezone';
 import type { Appointment, User } from '@/types/database';
 
 export function ManagerDashboard() {
@@ -111,7 +112,7 @@ export function ManagerDashboard() {
                         {apt.customer?.first_name} {apt.customer?.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {apt.technician?.name} | {format(new Date(apt.start_time), 'EEE h:mm a')}
+                        {apt.technician?.name} | {formatEST(apt.start_time, 'EEE h:mm a')}
                       </p>
                     </div>
                     <span className="text-xs capitalize px-2 py-1 rounded-full bg-primary/10 text-primary">
