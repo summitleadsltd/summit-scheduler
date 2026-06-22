@@ -7,26 +7,43 @@ export interface GeocodingResult {
   display_name: string;
 }
 
+function stripUnitFromAddress(address: string): string {
+  return address.replace(/\b(suite|ste|unit|apt|apartment|#)\s*\S+/gi, '').replace(/\s{2,}/g, ' ').trim();
+}
+
+async function nominatimSearch(query: string): Promise<GeocodingResult | null> {
+  const params = new URLSearchParams({
+    q: query,
+    format: 'json',
+    limit: '1',
+    countrycodes: 'us',
+  });
+
+  const response = await fetch(`${NOMINATIM_URL}/search?${params}`, {
+    headers: { 'User-Agent': 'SummitScheduler/1.0' },
+  });
+
+  const data = await response.json();
+  if (data.length === 0) return null;
+
+  return {
+    latitude: parseFloat(data[0].lat),
+    longitude: parseFloat(data[0].lon),
+    display_name: data[0].display_name,
+  };
+}
+
 export async function geocodeAddress(address: string): Promise<GeocodingResult | null> {
   try {
-    const params = new URLSearchParams({
-      q: address,
-      format: 'json',
-      limit: '1',
-    });
+    const result = await nominatimSearch(address);
+    if (result) return result;
 
-    const response = await fetch(`${NOMINATIM_URL}/search?${params}`, {
-      headers: { 'User-Agent': 'SummitScheduler/1.0' },
-    });
+    const cleaned = stripUnitFromAddress(address);
+    if (cleaned !== address) {
+      return await nominatimSearch(cleaned);
+    }
 
-    const data = await response.json();
-    if (data.length === 0) return null;
-
-    return {
-      latitude: parseFloat(data[0].lat),
-      longitude: parseFloat(data[0].lon),
-      display_name: data[0].display_name,
-    };
+    return null;
   } catch {
     console.error('Geocoding failed');
     return null;
