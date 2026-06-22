@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { toEST } from '@/lib/timezone';
+import { createAppointmentEvent, updateAppointmentEvent, deleteAppointmentEvent } from './googleCalendarService';
 import type { Appointment, AppointmentStatus } from '@/types/database';
 
 export async function getAppointments(filters?: {
@@ -72,7 +73,30 @@ export async function createAppointment(appointment: {
     `)
     .single();
   if (error) throw error;
-  return data as Appointment;
+
+  const apt = data as Appointment;
+
+  // Create Google Calendar event if technician has connected calendar
+  if (apt.customer && apt.address) {
+    const customerName = `${apt.customer.first_name} ${apt.customer.last_name}`;
+    const address = apt.address
+      ? `${apt.address.address_line}, ${apt.address.city}, ${apt.address.state} ${apt.address.zip_code}`
+      : '';
+
+    await createAppointmentEvent(
+      apt.technician_id,
+      apt.id,
+      customerName,
+      apt.appointment_type,
+      apt.customer.phone,
+      address,
+      apt.notes || '',
+      apt.start_time,
+      apt.end_time,
+    );
+  }
+
+  return apt;
 }
 
 export async function updateAppointmentStatus(id: string, status: AppointmentStatus) {
@@ -83,6 +107,12 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
     .select()
     .single();
   if (error) throw error;
+
+  // If cancelled, delete the Google Calendar event
+  if (status === 'cancelled') {
+    await deleteAppointmentEvent(id);
+  }
+
   return data as Appointment;
 }
 
@@ -106,6 +136,10 @@ export async function rescheduleAppointment(id: string, start_time: string, end_
     `)
     .single();
   if (error) throw error;
+
+  // Update Google Calendar event
+  await updateAppointmentEvent(id, { startTime: start_time, endTime: end_time });
+
   return data as Appointment;
 }
 
@@ -129,10 +163,37 @@ export async function updateAppointment(id: string, update: {
     `)
     .single();
   if (error) throw error;
-  return data as Appointment;
+
+  const apt = data as Appointment;
+
+  // Update Google Calendar event if applicable
+  if (update.status === 'cancelled') {
+    await deleteAppointmentEvent(id);
+  } else if (update.start_time || update.end_time || update.appointment_type || update.notes) {
+    const customerName = apt.customer
+      ? `${apt.customer.first_name} ${apt.customer.last_name}`
+      : undefined;
+    const address = apt.address
+      ? `${apt.address.address_line}, ${apt.address.city}, ${apt.address.state} ${apt.address.zip_code}`
+      : undefined;
+
+    await updateAppointmentEvent(id, {
+      customerName,
+      appointmentType: update.appointment_type || apt.appointment_type,
+      address,
+      notes: update.notes,
+      startTime: update.start_time,
+      endTime: update.end_time,
+    });
+  }
+
+  return apt;
 }
 
 export async function deleteAppointment(id: string) {
+  // Delete Google Calendar event first
+  await deleteAppointmentEvent(id);
+
   const { error } = await supabase
     .from('ss_appointments')
     .delete()

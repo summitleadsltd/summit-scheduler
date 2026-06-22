@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 
 // Auth
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { GoogleCallback } from '@/pages/auth/GoogleCallback';
 
 // Technician
 import { TechnicianDashboard } from '@/pages/technician/TechnicianDashboard';
@@ -58,6 +59,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
       {/* Technician Portal */}
       <Route

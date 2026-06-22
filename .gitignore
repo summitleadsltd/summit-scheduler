@@ -33,3 +33,5 @@ ios/
 
 # TypeScript
 *.tsbuildinfo
+.vercel
+test*.md

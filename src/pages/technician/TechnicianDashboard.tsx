@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { getTodayAppointments, getWeekAppointments } from '@/services/appointmentService';
 import { StatCard } from '@/components/shared/StatCard';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Calendar, Clock, CheckCircle, MapPin } from 'lucide-react';
 import { formatEST } from '@/lib/timezone';
 import type { Appointment } from '@/types/database';
 
 export function TechnicianDashboard() {
   const { profile } = useAuthStore();
+  const navigate = useNavigate();
   const [todayAppts, setTodayAppts] = useState<Appointment[]>([]);
   const [weekAppts, setWeekAppts] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +44,23 @@ export function TechnicianDashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
+
+      {/* Google Calendar connection prompt */}
+      {profile && !profile.calendar_connected && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-blue-900">Connect Google Calendar</p>
+              <p className="text-sm text-blue-700">
+                Link your Google Calendar to receive appointment updates directly in your calendar app.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/technician/account')}>
+              Connect
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Today's Appointments" value={todayAppts.length} icon={Calendar} />
