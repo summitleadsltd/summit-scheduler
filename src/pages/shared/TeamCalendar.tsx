@@ -17,6 +17,7 @@ import type { Appointment, User } from '@/types/database';
 
 const statusColors: Record<string, string> = {
   scheduled: '#3b82f6',
+  confirmed: '#8b5cf6',
   in_progress: '#f59e0b',
   completed: '#22c55e',
   cancelled: '#ef4444',

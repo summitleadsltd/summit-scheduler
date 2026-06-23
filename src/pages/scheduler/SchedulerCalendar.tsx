@@ -22,6 +22,15 @@ const technicianColors = [
   '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'
 ];
 
+const statusColors: Record<string, string> = {
+  scheduled: '#3b82f6',
+  confirmed: '#8b5cf6',
+  in_progress: '#f59e0b',
+  completed: '#22c55e',
+  cancelled: '#ef4444',
+  no_show: '#6b7280',
+};
+
 export function SchedulerCalendar() {
   const [events, setEvents] = useState<EventInput[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -68,14 +77,15 @@ export function SchedulerCalendar() {
     // Map appointments to calendar events
     const appointmentEvents: EventInput[] = data.map((apt) => {
       const techIndex = techs.findIndex((t) => t.id === apt.technician_id);
-      const color = technicianColors[techIndex % technicianColors.length] || '#3b82f6';
+      const techColor = technicianColors[techIndex % technicianColors.length] || '#3b82f6';
+      const statusColor = statusColors[apt.status] || techColor;
       return {
         id: apt.id,
         title: `${apt.customer?.first_name} ${apt.customer?.last_name} - ${apt.technician?.name}`,
         start: apt.start_time,
         end: apt.end_time,
-        backgroundColor: color,
-        borderColor: color,
+        backgroundColor: statusColor,
+        borderColor: statusColor,
         extendedProps: { type: 'appointment', technicianId: apt.technician_id },
       };
     });
