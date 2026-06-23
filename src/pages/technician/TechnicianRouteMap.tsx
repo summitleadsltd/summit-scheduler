@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { formatEST } from '@/lib/timezone';
 import { Navigation, ChevronLeft, ChevronRight, Calendar, MapPin, Clock } from 'lucide-react';
 import { StartRouteButton } from '@/components/shared/StartRouteButton';
-import { openNavigation, formatAddress } from '@/services/navigationService';
+import { openNavigation, formatAddress, optimizeRoute, calculateRouteStats, type RoutePoint } from '@/services/navigationService';
 import type { Appointment } from '@/types/database';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -35,6 +35,7 @@ export function TechnicianRouteMap() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
+  const [routeOptimized, setRouteOptimized] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -149,54 +150,56 @@ export function TechnicianRouteMap() {
     }
   };
 
-  const calculateRouteStats = () => {
-    if (appointments.length === 0) {
-      return { totalDistance: 0, driveTime: 0, routeDuration: 0 };
-    }
-
-    let totalDistance = 0;
-    let driveTime = 0;
-
-    for (let i = 0; i < appointments.length - 1; i++) {
-      const from = appointments[i].address;
-      const to = appointments[i + 1].address;
-      if (from?.latitude && from?.longitude && to?.latitude && to?.longitude) {
-        // Simple distance calculation (Haversine formula approximation)
-        const lat1 = from.latitude * Math.PI / 180;
-        const lat2 = to.latitude * Math.PI / 180;
-        const deltaLat = (to.latitude - from.latitude) * Math.PI / 180;
-        const deltaLon = (to.longitude - from.longitude) * Math.PI / 180;
-        
-        const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-                  Math.cos(lat1) * Math.cos(lat2) *
-                  Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = 3959 * c; // Miles
-        
-        totalDistance += distance;
-        driveTime += distance * 1.5; // Approximate 1.5 minutes per mile
-      }
-    }
-
-    const firstStart = new Date(appointments[0].start_time);
-    const lastEnd = new Date(appointments[appointments.length - 1].end_time);
-    const routeDuration = (lastEnd.getTime() - firstStart.getTime()) / (1000 * 60 * 60); // Hours
-
-    return { totalDistance, driveTime, routeDuration };
+  const handleToggleOptimization = () => {
+    setRouteOptimized(!routeOptimized);
   };
 
-  const routeStats = calculateRouteStats();
+  // Convert appointments to route points
+  const routePoints: RoutePoint[] = appointments.map((apt) => ({
+    id: apt.id,
+    latitude: apt.address?.latitude || 0,
+    longitude: apt.address?.longitude || 0,
+    scheduledTime: new Date(apt.start_time),
+    duration: (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60), // minutes
+  }));
+
+  // Get optimized or original route
+  const displayAppointments = routeOptimized
+    ? (() => {
+        const optimizedPoints = optimizeRoute(routePoints);
+        const optimizedIds = optimizedPoints.map((p) => p.id);
+        return appointments.filter((apt) => optimizedIds.includes(apt.id))
+          .sort((a, b) => optimizedIds.indexOf(a.id) - optimizedIds.indexOf(b.id));
+      })()
+    : appointments;
+
+  // Calculate route statistics using the new service
+  const displayRoutePoints = displayAppointments.map((apt) => ({
+    id: apt.id,
+    latitude: apt.address?.latitude || 0,
+    longitude: apt.address?.longitude || 0,
+    scheduledTime: new Date(apt.start_time),
+    duration: (new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60),
+  }));
+
+  const routeStats = calculateRouteStats(displayRoutePoints);
+
+  // Calculate route duration from first start to last end
+  const routeDuration = displayAppointments.length > 0
+    ? (new Date(displayAppointments[displayAppointments.length - 1].end_time).getTime() -
+       new Date(displayAppointments[0].start_time).getTime()) / (1000 * 60 * 60)
+    : 0;
 
   if (loading) {
     return <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   }
 
   const center: [number, number] =
-    appointments.length > 0 && appointments[0].address?.latitude && appointments[0].address?.longitude
-      ? [appointments[0].address.latitude, appointments[0].address.longitude]
+    displayAppointments.length > 0 && displayAppointments[0].address?.latitude && displayAppointments[0].address?.longitude
+      ? [displayAppointments[0].address.latitude, displayAppointments[0].address.longitude]
       : [39.8283, -98.5795]; // Center of US
 
-  const routeCoords: [number, number][] = appointments
+  const routeCoords: [number, number][] = displayAppointments
     .filter((a) => a.address?.latitude && a.address?.longitude)
     .map((a) => [a.address!.latitude!, a.address!.longitude!]);
 
@@ -252,23 +255,34 @@ export function TechnicianRouteMap() {
                 <Navigation className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">Drive Time</p>
-                  <p className="font-semibold">{Math.round(routeStats.driveTime)} min</p>
+                  <p className="font-semibold">{Math.round(routeStats.totalDriveTime)} min</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">Route Duration</p>
-                  <p className="font-semibold">{routeStats.routeDuration.toFixed(1)} hrs</p>
+                  <p className="font-semibold">{routeDuration.toFixed(1)} hrs</p>
                 </div>
               </div>
             </div>
-            {appointments.length > 0 && (
-              <Button size={isMobile ? "lg" : "lg"} className="w-full md:w-auto" onClick={handleStartEntireRoute}>
+            <div className="flex gap-2">
+              <Button
+                size={isMobile ? "lg" : "lg"}
+                className="w-full md:w-auto"
+                variant={routeOptimized ? "default" : "outline"}
+                onClick={handleToggleOptimization}
+              >
                 <Navigation className="h-4 w-4 mr-2" />
-                Start Entire Route
+                {routeOptimized ? 'Optimized Route' : 'Optimize Route'}
               </Button>
-            )}
+              {displayAppointments.length > 0 && (
+                <Button size={isMobile ? "lg" : "lg"} className="w-full md:w-auto" onClick={handleStartEntireRoute}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Start Route
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -279,14 +293,14 @@ export function TechnicianRouteMap() {
             <CardContent className="p-0 overflow-hidden rounded-lg">
               <MapContainer
                 center={center}
-                zoom={appointments.length > 0 ? 12 : 4}
+                zoom={displayAppointments.length > 0 ? 12 : 4}
                 style={{ height: '500px', width: '100%' }}
               >
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {appointments.map((apt, index) =>
+                {displayAppointments.map((apt, index) =>
                   apt.address?.latitude && apt.address?.longitude ? (
                     <Marker
                       key={apt.id}

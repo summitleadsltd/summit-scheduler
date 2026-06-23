@@ -54,7 +54,7 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
-            <img src="/npp-logo.png" alt="New Paradigm Projects" className="h-12 w-auto mx-auto" />
+            <img src="/npp-logo.jpg" alt="New Paradigm Projects" className="h-12 w-auto mx-auto" />
           </div>
           <p className="text-sm text-muted-foreground">
             Intelligent Field Service Dispatch

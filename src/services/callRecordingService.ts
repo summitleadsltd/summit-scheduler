@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { logAppointmentActivity } from './auditTrailService';
+import { notifyCallRecordingAdded, notifyCallRecordingDeleted } from './notificationService';
+import { getAppointment } from './appointmentService';
 
 const BUCKET_NAME = 'call-recordings';
 
@@ -51,6 +53,9 @@ export async function uploadCallRecording(params: {
 
   if (error) throw error;
 
+  // Get appointment details for notification
+  const appointment = await getAppointment(appointmentId);
+
   // Log audit trail
   await logAppointmentActivity({
     appointment_id: appointmentId,
@@ -63,6 +68,15 @@ export async function uploadCallRecording(params: {
       duration_seconds: duration,
     },
   });
+
+  // Notify technician
+  if (appointment) {
+    await notifyCallRecordingAdded(
+      appointment.technician_id,
+      `${appointment.customer?.first_name} ${appointment.customer?.last_name}`,
+      file.name
+    );
+  }
 
   return data;
 }
@@ -104,6 +118,9 @@ export async function deleteCallRecording(recordingId: string, userId: string, u
 
   if (error) throw error;
 
+  // Get appointment details for notification
+  const appointment = await getAppointment(recording.appointment_id);
+
   // Log audit trail
   await logAppointmentActivity({
     appointment_id: recording.appointment_id,
@@ -114,6 +131,15 @@ export async function deleteCallRecording(recordingId: string, userId: string, u
       file_name: recording.file_name,
     },
   });
+
+  // Notify technician
+  if (appointment) {
+    await notifyCallRecordingDeleted(
+      appointment.technician_id,
+      `${appointment.customer?.first_name} ${appointment.customer?.last_name}`,
+      recording.file_name
+    );
+  }
 }
 
 export async function getRecordingUrl(recordingId: string) {

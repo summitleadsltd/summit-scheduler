@@ -209,3 +209,41 @@ export async function notifyAppointmentStatusChangedAll(
     type: 'appointment_status_changed',
   });
 }
+
+export async function notifyCallRecordingAdded(
+  technicianId: string,
+  customerName: string,
+  fileName: string,
+) {
+  await createNotification({
+    user_id: technicianId,
+    title: 'Call Recording Added',
+    body: `Call recording "${fileName}" added for appointment with ${customerName}`,
+    type: 'call_recording_added',
+  });
+}
+
+export async function notifyCallRecordingDeleted(
+  technicianId: string,
+  customerName: string,
+  fileName: string,
+) {
+  await createNotification({
+    user_id: technicianId,
+    title: 'Call Recording Deleted',
+    body: `Call recording "${fileName}" deleted for appointment with ${customerName}`,
+    type: 'call_recording_deleted',
+  });
+}
+
+export async function notifyNoteAdded(
+  technicianId: string,
+  customerName: string,
+) {
+  await createNotification({
+    user_id: technicianId,
+    title: 'Note Added',
+    body: `A note was added to your appointment with ${customerName}`,
+    type: 'note_added',
+  });
+}
