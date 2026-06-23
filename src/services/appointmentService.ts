@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { toEST, formatEST } from '@/lib/timezone';
-import { createAppointmentEvent, updateAppointmentEvent, deleteAppointmentEvent } from './googleCalendarService';
 import { getAvailabilityBlocks } from './technicianService';
 import {
   notifyAppointmentCreatedAll,
@@ -8,6 +7,7 @@ import {
   notifyAppointmentDeletedAll,
   notifyAppointmentStatusChangedAll,
 } from './notificationService';
+import { logAppointmentActivity } from './auditTrailService';
 import type { Appointment, AppointmentStatus } from '@/types/database';
 
 // Check if a time slot is available for a technician
@@ -119,7 +119,7 @@ export async function createAppointment(appointment: {
   appointment_type: string;
   notes?: string;
   created_by: string;
-}) {
+}, user: { id: string; name: string }) {
   // Check availability before creating appointment
   const availabilityCheck = await checkTechnicianAvailability(
     appointment.technician_id,
@@ -145,25 +145,21 @@ export async function createAppointment(appointment: {
 
   const apt = data as Appointment;
 
-  // Create Google Calendar event if technician has connected calendar
-  if (apt.customer && apt.address) {
-    const customerName = `${apt.customer.first_name} ${apt.customer.last_name}`;
-    const address = apt.address
-      ? `${apt.address.address_line}, ${apt.address.city}, ${apt.address.state} ${apt.address.zip_code}`
-      : '';
-
-    await createAppointmentEvent(
-      apt.technician_id,
-      apt.id,
-      customerName,
-      apt.appointment_type,
-      apt.customer.phone,
-      address,
-      apt.notes || '',
-      apt.start_time,
-      apt.end_time,
-    );
-  }
+  // Log audit trail
+  await logAppointmentActivity({
+    appointment_id: apt.id,
+    user_id: user.id,
+    user_name: user.name,
+    action_type: 'created',
+    new_value: {
+      customer_id: apt.customer_id,
+      technician_id: apt.technician_id,
+      start_time: apt.start_time,
+      end_time: apt.end_time,
+      appointment_type: apt.appointment_type,
+      status: apt.status,
+    },
+  });
 
   // Notify all technicians and managers
   await notifyAppointmentCreatedAll(
@@ -176,7 +172,14 @@ export async function createAppointment(appointment: {
   return apt;
 }
 
-export async function updateAppointmentStatus(id: string, status: AppointmentStatus) {
+export async function updateAppointmentStatus(id: string, status: AppointmentStatus, user: { id: string; name: string }) {
+  // Get current appointment for audit trail
+  const { data: currentApt } = await supabase
+    .from('ss_appointments')
+    .select('status')
+    .eq('id', id)
+    .single();
+
   const { data, error } = await supabase
     .from('ss_appointments')
     .update({ status, updated_at: new Date().toISOString() })
@@ -191,10 +194,15 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
 
   const apt = data as Appointment;
 
-  // If cancelled, delete the Google Calendar event
-  if (status === 'cancelled') {
-    await deleteAppointmentEvent(id);
-  }
+  // Log audit trail
+  await logAppointmentActivity({
+    appointment_id: apt.id,
+    user_id: user.id,
+    user_name: user.name,
+    action_type: 'status_changed',
+    old_value: { status: currentApt?.status },
+    new_value: { status: apt.status },
+  });
 
   // Notify all technicians and managers
   await notifyAppointmentStatusChangedAll(
@@ -206,7 +214,14 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
   return apt;
 }
 
-export async function rescheduleAppointment(id: string, start_time: string, end_time: string, technician_id?: string) {
+export async function rescheduleAppointment(id: string, start_time: string, end_time: string, technician_id?: string, user?: { id: string; name: string }) {
+  // Get current appointment for audit trail
+  const { data: currentApt } = await supabase
+    .from('ss_appointments')
+    .select('start_time, end_time, technician_id')
+    .eq('id', id)
+    .single();
+
   const update: Record<string, string> = {
     start_time,
     end_time,
@@ -229,8 +244,26 @@ export async function rescheduleAppointment(id: string, start_time: string, end_
 
   const apt = data as Appointment;
 
-  // Update Google Calendar event
-  await updateAppointmentEvent(id, { startTime: start_time, endTime: end_time });
+  // Log audit trail
+  if (user) {
+    const actionType = technician_id && technician_id !== currentApt?.technician_id ? 'reassigned' : 'rescheduled';
+    await logAppointmentActivity({
+      appointment_id: apt.id,
+      user_id: user.id,
+      user_name: user.name,
+      action_type: actionType,
+      old_value: {
+        start_time: currentApt?.start_time,
+        end_time: currentApt?.end_time,
+        technician_id: currentApt?.technician_id,
+      },
+      new_value: {
+        start_time: apt.start_time,
+        end_time: apt.end_time,
+        technician_id: apt.technician_id,
+      },
+    });
+  }
 
   // Notify all technicians and managers
   await notifyAppointmentUpdatedAll(
@@ -250,7 +283,14 @@ export async function updateAppointment(id: string, update: {
   notes?: string;
   status?: AppointmentStatus;
   technician_id?: string;
-}) {
+}, user?: { id: string; name: string }) {
+  // Get current appointment for audit trail
+  const { data: currentApt } = await supabase
+    .from('ss_appointments')
+    .select('start_time, end_time, appointment_type, notes, status, technician_id')
+    .eq('id', id)
+    .single();
+
   const { data, error } = await supabase
     .from('ss_appointments')
     .update({ ...update, updated_at: new Date().toISOString() })
@@ -266,24 +306,22 @@ export async function updateAppointment(id: string, update: {
 
   const apt = data as Appointment;
 
-  // Update Google Calendar event if applicable
-  if (update.status === 'cancelled') {
-    await deleteAppointmentEvent(id);
-  } else if (update.start_time || update.end_time || update.appointment_type || update.notes) {
-    const customerName = apt.customer
-      ? `${apt.customer.first_name} ${apt.customer.last_name}`
-      : undefined;
-    const address = apt.address
-      ? `${apt.address.address_line}, ${apt.address.city}, ${apt.address.state} ${apt.address.zip_code}`
-      : undefined;
-
-    await updateAppointmentEvent(id, {
-      customerName,
-      appointmentType: update.appointment_type || apt.appointment_type,
-      address,
-      notes: update.notes,
-      startTime: update.start_time,
-      endTime: update.end_time,
+  // Log audit trail
+  if (user) {
+    await logAppointmentActivity({
+      appointment_id: apt.id,
+      user_id: user.id,
+      user_name: user.name,
+      action_type: 'updated',
+      old_value: {
+        start_time: currentApt?.start_time,
+        end_time: currentApt?.end_time,
+        appointment_type: currentApt?.appointment_type,
+        notes: currentApt?.notes,
+        status: currentApt?.status,
+        technician_id: currentApt?.technician_id,
+      },
+      new_value: update,
     });
   }
 
@@ -300,8 +338,8 @@ export async function updateAppointment(id: string, update: {
   return apt;
 }
 
-export async function deleteAppointment(id: string) {
-  // Get appointment details before deletion for notification
+export async function deleteAppointment(id: string, user?: { id: string; name: string }) {
+  // Get appointment details before deletion for notification and audit trail
   const { data: apt } = await supabase
     .from('ss_appointments')
     .select(`
@@ -312,14 +350,29 @@ export async function deleteAppointment(id: string) {
     .eq('id', id)
     .single();
 
-  // Delete Google Calendar event first
-  await deleteAppointmentEvent(id);
-
   const { error } = await supabase
     .from('ss_appointments')
     .delete()
     .eq('id', id);
   if (error) throw error;
+
+  // Log audit trail
+  if (user && apt) {
+    await logAppointmentActivity({
+      appointment_id: apt.id,
+      user_id: user.id,
+      user_name: user.name,
+      action_type: 'deleted',
+      old_value: {
+        customer_id: apt.customer_id,
+        technician_id: apt.technician_id,
+        start_time: apt.start_time,
+        end_time: apt.end_time,
+        appointment_type: apt.appointment_type,
+        status: apt.status,
+      },
+    });
+  }
 
   // Notify all technicians and managers
   if (apt) {

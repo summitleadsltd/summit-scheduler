@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getAppointments, updateAppointmentStatus } from '@/services/appointmentService';
-import { getCalendarEvents, getValidAccessToken } from '@/services/googleCalendarService';
+// import { getCalendarEvents, getValidAccessToken } from '@/services/googleCalendarService';
 import { getAllAvailabilityBlocks } from '@/services/technicianService';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/authStore';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -12,6 +13,9 @@ import type { EventInput, EventClickArg } from '@fullcalendar/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
+import { ActivityTimeline } from '@/components/shared/ActivityTimeline';
+import { CallRecordings } from '@/components/shared/CallRecordings';
+import { StartRouteButton } from '@/components/shared/StartRouteButton';
 import {
   Select,
   SelectContent,
@@ -38,11 +42,21 @@ const technicianColors = [
 ];
 
 export function ManagerCalendar() {
+  const { profile } = useAuthStore();
   const [events, setEvents] = useState<EventInput[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [filterTechId, setFilterTechId] = useState<string>('all');
+  const [selectedTechnicians, setSelectedTechnicians] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const loadData = useCallback(async () => {
     // Load all appointments from DB
@@ -65,8 +79,13 @@ export function ManagerCalendar() {
       addDays(now, 30).toISOString()
     );
 
+    // Filter appointments by selected technicians
+    const filteredAppointments = selectedTechnicians.length === 0
+      ? data
+      : data.filter((apt) => selectedTechnicians.includes(apt.technician_id));
+
     // Map appointments to calendar events
-    const appointmentEvents: EventInput[] = data.map((apt) => {
+    const appointmentEvents: EventInput[] = filteredAppointments.map((apt) => {
       const techIndex = (techs || []).findIndex((t: User) => t.id === apt.technician_id);
       const color = technicianColors[techIndex % technicianColors.length] || '#3b82f6';
       return {
@@ -80,8 +99,13 @@ export function ManagerCalendar() {
       };
     });
 
+    // Filter availability blocks by selected technicians
+    const filteredAvailabilityBlocks = selectedTechnicians.length === 0
+      ? availabilityBlocks
+      : availabilityBlocks.filter((block) => selectedTechnicians.includes(block.technician_id));
+
     // Map availability blocks to calendar events
-    const availabilityEvents: EventInput[] = availabilityBlocks.map((block) => {
+    const availabilityEvents: EventInput[] = filteredAvailabilityBlocks.map((block) => {
       return {
         id: `avail-${block.id}`,
         title: 'Unavailable',
@@ -93,47 +117,9 @@ export function ManagerCalendar() {
       };
     });
 
-    // Load Google Calendar events for connected technicians
-    const googleEvents: EventInput[] = [];
-    for (const tech of (techs || []) as User[]) {
-      if (tech.calendar_connected && tech.google_calendar_id) {
-        const accessToken = await getValidAccessToken(tech.id);
-        if (accessToken) {
-          try {
-            const calEvents = await getCalendarEvents(
-              accessToken,
-              tech.google_calendar_id,
-              now.toISOString(),
-              addDays(now, 30).toISOString(),
-            );
-            const techIndex = (techs || []).findIndex((t: User) => t.id === tech.id);
-            const color = technicianColors[techIndex % technicianColors.length] || '#3b82f6';
-
-            for (const ev of calEvents) {
-              // Skip events that are already in our DB (avoid duplicates)
-              const isDuplicate = data.some((a) => a.google_calendar_event_id === ev.id);
-              if (isDuplicate) continue;
-
-              googleEvents.push({
-                id: `gcal-${ev.id}`,
-                title: `📅 ${ev.summary} (${tech.name})`,
-                start: ev.start.dateTime,
-                end: ev.end.dateTime,
-                backgroundColor: color + '40',
-                borderColor: color,
-                textColor: color,
-                extendedProps: { type: 'google_event', technicianId: tech.id },
-              });
-            }
-          } catch {
-            // Silently skip failed calendar fetches
-          }
-        }
-      }
-    }
-
-    setEvents([...appointmentEvents, ...availabilityEvents, ...googleEvents]);
-  }, []);
+    // Google Calendar integration removed - using internal scheduling engine only
+    setEvents([...appointmentEvents, ...availabilityEvents]);
+  }, [selectedTechnicians]);
 
   useEffect(() => {
     loadData();
@@ -195,9 +181,9 @@ export function ManagerCalendar() {
   };
 
   const handleStatusChange = async (status: AppointmentStatus) => {
-    if (!selectedAppointment) return;
+    if (!selectedAppointment || !profile) return;
     try {
-      await updateAppointmentStatus(selectedAppointment.id, status);
+      await updateAppointmentStatus(selectedAppointment.id, status, { id: profile.id, name: profile.name });
       toast.success('Status updated');
       setSelectedAppointment(null);
       loadData();
@@ -225,25 +211,45 @@ export function ManagerCalendar() {
         </div>
       </div>
 
-      {/* Technician Legend */}
+      {/* Technician Filter */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Technicians</CardTitle>
+          <CardTitle className="text-sm font-medium">Filter by Technicians</CardTitle>
         </CardHeader>
         <CardContent className="pb-3">
-          <div className="flex flex-wrap gap-3">
-            {technicians.map((tech, i) => (
-              <div key={tech.id} className="flex items-center gap-1.5 text-sm">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: technicianColors[i % technicianColors.length] }}
-                />
-                <span>{tech.name}</span>
-                {tech.calendar_connected && (
-                  <span className="text-xs text-green-600">●</span>
-                )}
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedTechnicians([])}
+              className="px-3 py-1 text-sm bg-secondary rounded hover:bg-secondary/80"
+            >
+              Show All
+            </button>
+            {technicians.map((tech, i) => {
+              const isSelected = selectedTechnicians.includes(tech.id);
+              const color = technicianColors[i % technicianColors.length];
+              return (
+                <button
+                  key={tech.id}
+                  onClick={() => {
+                    setSelectedTechnicians((prev) => {
+                      if (prev.includes(tech.id)) {
+                        return prev.filter((id) => id !== tech.id);
+                      }
+                      return [...prev, tech.id];
+                    });
+                  }}
+                  className={`px-3 py-1 text-sm rounded border-2 transition-colors flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'border-primary bg-primary/10'
+                      : 'border-transparent bg-secondary hover:bg-secondary/80'
+                  }`}
+                  style={{ borderColor: isSelected ? color : undefined }}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                  {tech.name}
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -252,11 +258,11 @@ export function ManagerCalendar() {
         <CardContent className="p-4">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-            initialView="timeGridWeek"
+            initialView={isMobile ? 'listWeek' : 'timeGridWeek'}
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
+              right: isMobile ? 'listWeek,timeGridWeek' : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
             }}
             events={filteredEvents}
             eventClick={handleEventClick}
@@ -266,12 +272,14 @@ export function ManagerCalendar() {
             hiddenDays={[0, 6]}
             businessHours={{ daysOfWeek: [1, 2, 3, 4, 5], startTime: '09:00', endTime: '19:00' }}
             height="auto"
+            eventMinHeight={isMobile ? 60 : 30}
+            dayHeaderFormat={isMobile ? { weekday: 'short' } : { weekday: 'short', month: 'numeric', day: 'numeric' }}
           />
         </CardContent>
       </Card>
 
       <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Appointment Details</DialogTitle>
           </DialogHeader>
@@ -308,13 +316,13 @@ export function ManagerCalendar() {
                   <p className="text-sm text-muted-foreground">Address</p>
                   <p className="font-medium">{selectedAppointment.address?.address_line}</p>
                 </div>
-                {selectedAppointment.google_calendar_event_id && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Google Calendar</p>
-                    <p className="text-xs text-green-600">✓ Synced to technician's calendar</p>
-                  </div>
-                )}
               </div>
+
+              <ActivityTimeline appointmentId={selectedAppointment.id} />
+
+              <CallRecordings appointmentId={selectedAppointment.id} />
+
+              <StartRouteButton appointment={selectedAppointment} className="w-full" />
 
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Update Status</p>

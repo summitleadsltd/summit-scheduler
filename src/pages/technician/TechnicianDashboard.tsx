@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { getTodayAppointments, getWeekAppointments } from '@/services/appointmentService';
 import { StatCard } from '@/components/shared/StatCard';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
+import { StartRouteButton } from '@/components/shared/StartRouteButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, CheckCircle, MapPin } from 'lucide-react';
@@ -81,7 +82,7 @@ export function TechnicianDashboard() {
               <div className="space-y-3">
                 {todayAppts.map((apt) => (
                   <div key={apt.id} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-sm">
                         {apt.customer?.first_name} {apt.customer?.last_name}
                       </p>
@@ -93,7 +94,10 @@ export function TechnicianDashboard() {
                         {apt.address?.address_line}
                       </p>
                     </div>
-                    <AppointmentStatusBadge status={apt.status} />
+                    <div className="flex items-center gap-2">
+                      <StartRouteButton appointment={apt} size="sm" variant="outline" />
+                      <AppointmentStatusBadge status={apt.status} />
+                    </div>
                   </div>
                 ))}
               </div>

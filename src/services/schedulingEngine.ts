@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { getRoute } from './geocodingService';
-import { getFreeBusy, getCalendarEvents, getValidAccessToken } from './googleCalendarService';
-import type { SchedulingSlot, Appointment, User, GoogleCalendarEvent } from '@/types/database';
+// import { getFreeBusy, getCalendarEvents, getValidAccessToken } from './googleCalendarService';
+import type { SchedulingSlot, Appointment, User } from '@/types/database';
 import { addMinutes, startOfDay, endOfDay, parseISO, isAfter, isBefore, format, addDays, getDay } from 'date-fns';
 import { toEST } from '@/lib/timezone';
 
@@ -15,7 +15,7 @@ const MAX_SLOTS = 10;
 interface TechnicianCalendarData {
   technician: User;
   busySlots: { start: Date; end: Date }[];
-  events: GoogleCalendarEvent[];
+  events: Appointment[];
   appointments: Appointment[]; // DB appointments for address data (travel calc)
 }
 
@@ -76,41 +76,8 @@ async function getTechnicianCalendarData(
   const timeMin = searchStart.toISOString();
   const timeMax = searchEnd.toISOString();
   let busySlots: { start: Date; end: Date }[] = [];
-  let events: GoogleCalendarEvent[] = [];
 
-  // Try Google Calendar if connected
-  if (technician.calendar_connected && technician.google_calendar_id) {
-    const accessToken = await getValidAccessToken(technician.id);
-    if (accessToken) {
-      try {
-        // Get FreeBusy data for conflict detection
-        const freeBusy = await getFreeBusy(
-          accessToken,
-          [technician.google_calendar_id],
-          timeMin,
-          timeMax,
-        );
-        const calBusy = freeBusy[technician.google_calendar_id] || [];
-        busySlots = calBusy.map((slot) => ({
-          start: new Date(slot.start),
-          end: new Date(slot.end),
-        }));
-
-        // Get actual events for travel calculation (need locations)
-        events = await getCalendarEvents(
-          accessToken,
-          technician.google_calendar_id,
-          timeMin,
-          timeMax,
-        );
-      } catch {
-        // Fall back to DB appointments if Google Calendar fails
-        console.warn(`Google Calendar fetch failed for ${technician.name}, falling back to DB`);
-      }
-    }
-  }
-
-  // Also get DB appointments (have geocoded addresses for travel calc)
+  // Get DB appointments only - Google Calendar integration removed
   const { data: appointments } = await supabase
     .from('ss_appointments')
     .select('*, address:ss_addresses(*)')
@@ -120,18 +87,16 @@ async function getTechnicianCalendarData(
     .neq('status', 'cancelled')
     .order('start_time');
 
-  // If no Google Calendar data, use DB appointments as busy slots
-  if (busySlots.length === 0 && !technician.calendar_connected) {
-    busySlots = (appointments || []).map((apt: Appointment) => ({
-      start: new Date(apt.start_time),
-      end: new Date(apt.end_time),
-    }));
-  }
+  // Use DB appointments as busy slots
+  busySlots = (appointments || []).map((apt: Appointment) => ({
+    start: new Date(apt.start_time),
+    end: new Date(apt.end_time),
+  }));
 
   return {
     technician,
     busySlots,
-    events,
+    events: appointments || [],
     appointments: (appointments || []) as Appointment[],
   };
 }

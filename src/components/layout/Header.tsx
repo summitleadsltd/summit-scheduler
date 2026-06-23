@@ -1,4 +1,4 @@
-import { Bell } from 'lucide-react';
+import { Bell, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -13,7 +13,7 @@ import { formatDistanceEST } from '@/lib/timezone';
 import { useEffect } from 'react';
 
 export function Header() {
-  const { profile } = useAuthStore();
+  const { profile, signOut } = useAuthStore();
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } =
     useNotificationStore();
 
@@ -77,6 +77,14 @@ export function Header() {
             </ScrollArea>
           </PopoverContent>
         </Popover>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={signOut}
+          title="Sign Out"
+        >
+          <LogOut className="h-5 w-5" />
+        </Button>
       </div>
     </header>
   );

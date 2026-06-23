@@ -11,7 +11,6 @@ import {
   Settings,
   Columns3,
   BookOpen,
-  LogOut,
   Menu,
   X,
   UserCog,
@@ -62,7 +61,7 @@ const technicianLinks = [
 ];
 
 export function Sidebar() {
-  const { profile, signOut } = useAuthStore();
+  const { profile } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const links =
@@ -103,7 +102,7 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t">
-        <div className="flex items-center gap-3 px-3 py-2 mb-2">
+        <div className="flex items-center gap-3 px-3 py-2">
           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-sm font-medium text-primary">
               {profile?.name?.charAt(0)?.toUpperCase()}
@@ -114,14 +113,6 @@ export function Sidebar() {
             <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 text-muted-foreground"
-          onClick={signOut}
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </Button>
       </div>
     </div>
   );

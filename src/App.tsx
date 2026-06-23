@@ -40,6 +40,7 @@ import { AdminDashboard } from '@/pages/admin/AdminDashboard';
 import { UserManagement } from '@/pages/admin/UserManagement';
 
 // Shared
+import { TeamCalendar } from '@/pages/shared/TeamCalendar';
 import { NotificationCenter } from '@/pages/shared/NotificationCenter';
 import { AccountSettings } from '@/pages/shared/AccountSettings';
 
@@ -79,6 +80,7 @@ function AppRoutes() {
         <Route path="/technician/calendar" element={<TechnicianCalendar />} />
         <Route path="/technician/route" element={<TechnicianRouteMap />} />
         <Route path="/technician/availability" element={<TechnicianAvailability />} />
+        <Route path="/technician/team-calendar" element={<TeamCalendar />} />
         <Route path="/technician/notifications" element={<NotificationCenter />} />
         <Route path="/technician/account" element={<AccountSettings />} />
       </Route>
@@ -95,6 +97,7 @@ function AppRoutes() {
         <Route path="/scheduler/booking" element={<CreateBooking />} />
         <Route path="/scheduler/calendar" element={<SchedulerCalendar />} />
         <Route path="/scheduler/customers" element={<CustomersPage />} />
+        <Route path="/scheduler/team-calendar" element={<TeamCalendar />} />
         <Route path="/scheduler/notifications" element={<NotificationCenter />} />
         <Route path="/scheduler/account" element={<AccountSettings />} />
       </Route>
@@ -116,6 +119,7 @@ function AppRoutes() {
         <Route path="/manager/customers" element={<CustomersPage />} />
         <Route path="/manager/reports" element={<ReportsPage />} />
         <Route path="/manager/settings" element={<SettingsPage />} />
+        <Route path="/manager/team-calendar" element={<TeamCalendar />} />
         <Route path="/manager/notifications" element={<NotificationCenter />} />
         <Route path="/manager/account" element={<AccountSettings />} />
       </Route>
@@ -136,6 +140,7 @@ function AppRoutes() {
         <Route path="/admin/customers" element={<CustomersPage />} />
         <Route path="/admin/reports" element={<ReportsPage />} />
         <Route path="/admin/settings" element={<SettingsPage />} />
+        <Route path="/admin/team-calendar" element={<TeamCalendar />} />
         <Route path="/admin/notifications" element={<NotificationCenter />} />
         <Route path="/admin/account" element={<AccountSettings />} />
       </Route>

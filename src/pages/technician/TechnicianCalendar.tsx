@@ -19,6 +19,9 @@ import type { EventInput, EventClickArg, DateSelectArg } from '@fullcalendar/cor
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
+import { ActivityTimeline } from '@/components/shared/ActivityTimeline';
+import { CallRecordings } from '@/components/shared/CallRecordings';
+import { StartRouteButton } from '@/components/shared/StartRouteButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,13 +39,9 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { addDays } from 'date-fns';
 import type { Appointment, AppointmentType, AppointmentStatus, Customer, Address, User } from '@/types/database';
 
-const statusColors: Record<string, string> = {
-  scheduled: '#3b82f6',
-  in_progress: '#f59e0b',
-  completed: '#22c55e',
-  cancelled: '#ef4444',
-  no_show: '#6b7280',
-};
+const technicianColors = [
+  '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'
+];
 
 const appointmentTypes: AppointmentType[] = ['installation', 'repair', 'maintenance', 'inspection', 'consultation'];
 const appointmentStatuses: AppointmentStatus[] = ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'];
@@ -53,7 +52,15 @@ export function TechnicianCalendar() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [customers, setCustomers] = useState<(Customer & { addresses: Address[] })[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
-  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>('all');
+  const [selectedTechnicians, setSelectedTechnicians] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -86,6 +93,7 @@ export function TechnicianCalendar() {
     endTime: '',
     notes: '',
     status: '' as string,
+    technicianId: '' as string,
   });
 
   const [saving, setSaving] = useState(false);
@@ -97,9 +105,15 @@ export function TechnicianCalendar() {
     const techs = await getTechnicians();
     setTechnicians(techs);
 
-    // Load appointments based on selected technician
-    const technicianId = selectedTechnicianId === 'all' ? undefined : selectedTechnicianId;
-    const data = await getAppointments(technicianId ? { technician_id: technicianId } : {});
+    // Load appointments based on selected technicians
+    let data;
+    if (selectedTechnicians.length === 0) {
+      // Show all appointments if no technicians selected
+      data = await getAppointments();
+    } else {
+      // Filter by selected technicians
+      data = (await getAppointments()).filter((apt) => selectedTechnicians.includes(apt.technician_id));
+    }
     setAppointments(data);
 
     // Load all availability blocks (so technicians can see each other's unavailability)
@@ -109,19 +123,28 @@ export function TechnicianCalendar() {
       addDays(now, 30).toISOString()
     );
 
+    // Filter availability blocks by selected technicians
+    const filteredAvailabilityBlocks = selectedTechnicians.length === 0
+      ? availabilityBlocks
+      : availabilityBlocks.filter((block) => selectedTechnicians.includes(block.technician_id));
+
     // Map appointments to calendar events
-    const appointmentEvents: EventInput[] = data.map((apt) => ({
-      id: apt.id,
-      title: `${apt.customer?.first_name} ${apt.customer?.last_name} - ${apt.appointment_type}`,
-      start: apt.start_time,
-      end: apt.end_time,
-      backgroundColor: statusColors[apt.status] || '#3b82f6',
-      borderColor: statusColors[apt.status] || '#3b82f6',
-      extendedProps: { type: 'appointment', technicianId: apt.technician_id },
-    }));
+    const appointmentEvents: EventInput[] = data.map((apt) => {
+      const techIndex = techs.findIndex((t) => t.id === apt.technician_id);
+      const color = technicianColors[techIndex % technicianColors.length] || '#3b82f6';
+      return {
+        id: apt.id,
+        title: `${apt.customer?.first_name} ${apt.customer?.last_name} - ${apt.technician?.name}`,
+        start: apt.start_time,
+        end: apt.end_time,
+        backgroundColor: color,
+        borderColor: color,
+        extendedProps: { type: 'appointment', technicianId: apt.technician_id },
+      };
+    });
 
     // Map availability blocks to calendar events (show all technicians' blocks)
-    const availabilityEvents: EventInput[] = availabilityBlocks.map((block) => ({
+    const availabilityEvents: EventInput[] = filteredAvailabilityBlocks.map((block) => ({
       id: `avail-${block.id}`,
       title: 'Unavailable',
       start: block.start_time,
@@ -132,7 +155,7 @@ export function TechnicianCalendar() {
     }));
 
     setEvents([...appointmentEvents, ...availabilityEvents]);
-  }, [profile, selectedTechnicianId]);
+  }, [profile, selectedTechnicians]);
 
   const loadCustomers = useCallback(async () => {
     try {
@@ -217,8 +240,9 @@ export function TechnicianCalendar() {
       endTime: toLocalDatetimeString(new Date(apt.end_time)),
       notes: apt.notes || '',
       status: apt.status,
+      technicianId: apt.technician_id,
     });
-    setSelectedAppointment(null);
+    setSelectedAppointment(apt);
     setShowEditDialog(true);
   };
 
@@ -263,7 +287,7 @@ export function TechnicianCalendar() {
         appointment_type: createForm.appointmentType,
         notes: createForm.notes || undefined,
         created_by: profile.id,
-      });
+      }, { id: profile.id, name: profile.name });
 
       toast.success('Appointment created');
       setShowCreateDialog(false);
@@ -287,7 +311,8 @@ export function TechnicianCalendar() {
         end_time: new Date(editForm.endTime).toISOString(),
         notes: editForm.notes,
         status: editForm.status as AppointmentStatus,
-      });
+        technician_id: editForm.technicianId,
+      }, { id: profile.id, name: profile.name });
       toast.success('Appointment updated');
       setShowEditDialog(false);
       await loadAppointments();
@@ -301,7 +326,7 @@ export function TechnicianCalendar() {
   const handleDelete = async (aptId: string) => {
     if (!confirm('Delete this appointment? This cannot be undone.')) return;
     try {
-      await deleteAppointment(aptId);
+      await deleteAppointment(aptId, { id: profile.id, name: profile.name });
       toast.success('Appointment deleted');
       setSelectedAppointment(null);
       await loadAppointments();
@@ -312,7 +337,7 @@ export function TechnicianCalendar() {
 
   const handleStatusChange = async (aptId: string, status: AppointmentStatus) => {
     try {
-      await updateAppointmentStatus(aptId, status);
+      await updateAppointmentStatus(aptId, status, { id: profile.id, name: profile.name });
       toast.success(`Status updated to ${status.replace('_', ' ')}`);
       setSelectedAppointment(null);
       await loadAppointments();
@@ -356,42 +381,58 @@ export function TechnicianCalendar() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold">Calendar</h1>
-          <Select value={selectedTechnicianId} onValueChange={setSelectedTechnicianId}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select technician" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Technicians</SelectItem>
-              {technicians.map((tech) => (
-                <SelectItem key={tech.id} value={tech.id}>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedTechnicians([])}
+              className="px-3 py-1 text-sm bg-secondary rounded hover:bg-secondary/80"
+            >
+              Show All
+            </button>
+            {technicians.map((tech) => {
+              const isSelected = selectedTechnicians.includes(tech.id);
+              return (
+                <button
+                  key={tech.id}
+                  onClick={() => {
+                    setSelectedTechnicians((prev) => {
+                      if (prev.includes(tech.id)) {
+                        return prev.filter((id) => id !== tech.id);
+                      }
+                      return [...prev, tech.id];
+                    });
+                  }}
+                  className={`px-3 py-1 text-sm rounded border-2 transition-colors ${
+                    isSelected
+                      ? 'border-primary bg-primary/10'
+                      : 'border-transparent bg-secondary hover:bg-secondary/80'
+                  }`}
+                >
                   {tech.name} {tech.id === profile?.id ? '(You)' : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        {selectedTechnicianId === 'all' || selectedTechnicianId === profile?.id ? (
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Appointment
-          </Button>
-        ) : null}
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Appointment
+        </Button>
       </div>
 
       <Card>
         <CardContent className="p-4">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-            initialView="timeGridWeek"
+            initialView={isMobile ? 'listWeek' : 'timeGridWeek'}
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
+              right: isMobile ? 'listWeek,timeGridWeek' : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
             }}
             events={events}
             eventClick={handleEventClick}
-            selectable={selectedTechnicianId === 'all' || selectedTechnicianId === profile?.id}
-            select={selectedTechnicianId === 'all' || selectedTechnicianId === profile?.id ? handleDateSelect : undefined}
+            selectable={true}
+            select={handleDateSelect}
             slotMinTime="09:00:00"
             slotMaxTime="19:00:00"
             hiddenDays={[0, 6]}
@@ -399,13 +440,15 @@ export function TechnicianCalendar() {
             allDaySlot={false}
             height="auto"
             expandRows={true}
+            eventMinHeight={isMobile ? 60 : 30}
+            dayHeaderFormat={isMobile ? { weekday: 'short' } : { weekday: 'short', month: 'numeric', day: 'numeric' }}
           />
         </CardContent>
       </Card>
 
       {/* View Appointment Dialog */}
       <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Appointment Details</DialogTitle>
           </DialogHeader>
@@ -453,6 +496,12 @@ export function TechnicianCalendar() {
                   <p className="text-sm">{selectedAppointment.notes}</p>
                 </div>
               )}
+
+              <ActivityTimeline appointmentId={selectedAppointment.id} />
+
+              <CallRecordings appointmentId={selectedAppointment.id} />
+
+              <StartRouteButton appointment={selectedAppointment} className="w-full" />
 
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Update Status</p>
@@ -641,6 +690,20 @@ export function TechnicianCalendar() {
             <DialogTitle>Edit Appointment</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <Label>Technician (Reassign)</Label>
+              <Select value={editForm.technicianId} onValueChange={(v) => setEditForm((p) => ({ ...p, technicianId: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label>Appointment Type</Label>
               <Select value={editForm.appointmentType} onValueChange={(v) => setEditForm((p) => ({ ...p, appointmentType: v }))}>
