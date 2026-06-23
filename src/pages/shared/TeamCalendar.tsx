@@ -3,6 +3,7 @@ import './TeamCalendar.css';
 import { getAppointments, updateAppointment, deleteAppointment, updateAppointmentStatus } from '@/services/appointmentService';
 import { getUsers } from '@/services/userService';
 import { getAvailabilityBlocks } from '@/services/availabilityService';
+import { getAppointmentActivityLog } from '@/services/activityLogService';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import FullCalendar from '@fullcalendar/react';
@@ -22,8 +23,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMediaQuery } from '../../hooks/use-media-query';
-import { Pencil, Trash2, Save, X } from 'lucide-react';
+import { Pencil, Trash2, Save, X, History } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Technician color palette - unique colors for each technician
@@ -58,6 +60,7 @@ export function TeamCalendar() {
   const [selectedTechnician, setSelectedTechnician] = useState<string>('all');
   const [technicianColorMap, setTechnicianColorMap] = useState<Record<string, string>>({});
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [activityLog, setActivityLog] = useState<any[]>([]);
   const [editForm, setEditForm] = useState({
     appointment_type: '' as AppointmentType,
     start_time: '',
@@ -166,9 +169,17 @@ export function TeamCalendar() {
     setEvents([...appointmentEvents, ...availabilityEvents]);
   }, [appointments, availabilityBlocks, selectedTechnician, technicianColorMap, technicians]);
 
-  const handleEventClick = (info: EventClickArg) => {
+  const handleEventClick = async (info: EventClickArg) => {
     const apt = appointments.find((a) => a.id === info.event.id);
-    if (apt) setSelectedAppointment(apt);
+    if (apt) {
+      setSelectedAppointment(apt);
+      try {
+        const log = await getAppointmentActivityLog(apt.id);
+        setActivityLog(log);
+      } catch {
+        setActivityLog([]);
+      }
+    }
   };
 
   const handleEdit = (apt: Appointment) => {
@@ -286,7 +297,7 @@ export function TeamCalendar() {
       </Card>
 
       <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Appointment Details</DialogTitle>
           </DialogHeader>
@@ -359,6 +370,32 @@ export function TeamCalendar() {
                   </SelectContent>
                 </Select>
               </div>
+              {activityLog.length > 0 && (
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    <p className="text-sm font-medium">Activity History</p>
+                  </div>
+                  <ScrollArea className="h-48 rounded-md border">
+                    <div className="p-4 space-y-3">
+                      {activityLog.map((log) => (
+                        <div key={log.id} className="text-sm border-b pb-2 last:border-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium capitalize">{log.action_type.replace('_', ' ')}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatEST(log.created_at, 'MMM d, h:mm a')}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">by {log.user_name}</p>
+                          {log.field_changed && (
+                            <p className="text-xs text-muted-foreground">Field: {log.field_changed}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
