@@ -324,7 +324,7 @@ export function TeamCalendar() {
         <CardContent className={isMobile ? "p-2" : "p-4"}>
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-            initialView={isMobile ? 'listWeek' : 'timeGridWeek'}
+            initialView={isMobile ? 'listWeek' : 'dayGridMonth'}
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',
@@ -339,7 +339,16 @@ export function TeamCalendar() {
             businessHours={{ daysOfWeek: [1, 2, 3, 4, 5], startTime: '09:00', endTime: '17:00' }}
             height="auto"
             slotLabelInterval={isMobile ? { hours: 2 } : { hours: 1 }}
-            eventMinHeight={isMobile ? 30 : 20}
+            eventMinHeight={isMobile ? 40 : 20}
+            slotMinWidth={isMobile ? 80 : 60}
+            dayHeaderFormat={isMobile ? { weekday: 'short', day: 'numeric' } : { weekday: 'long' }}
+            buttonText={{
+              today: 'Today',
+              month: 'Month',
+              week: 'Week',
+              day: 'Day',
+              list: 'List',
+            }}
           />
         </CardContent>
       </Card>
