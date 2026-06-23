@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { formatEST } from '@/lib/timezone';
 import { Navigation, ChevronLeft, ChevronRight, Calendar, MapPin, Clock } from 'lucide-react';
 import { StartRouteButton } from '@/components/shared/StartRouteButton';
+import { openNavigation, formatAddress } from '@/services/navigationService';
 import type { Appointment } from '@/types/database';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -141,6 +142,13 @@ export function TechnicianRouteMap() {
     setSelectedDate(new Date());
   };
 
+  const handleStartEntireRoute = () => {
+    if (appointments.length > 0 && appointments[0].address) {
+      const address = formatAddress(appointments[0].address);
+      openNavigation(address);
+    }
+  };
+
   const calculateRouteStats = () => {
     if (appointments.length === 0) {
       return { totalDistance: 0, driveTime: 0, routeDuration: 0 };
@@ -256,7 +264,7 @@ export function TechnicianRouteMap() {
               </div>
             </div>
             {appointments.length > 0 && (
-              <Button size={isMobile ? "lg" : "lg"} className="w-full md:w-auto">
+              <Button size={isMobile ? "lg" : "lg"} className="w-full md:w-auto" onClick={handleStartEntireRoute}>
                 <Navigation className="h-4 w-4 mr-2" />
                 Start Entire Route
               </Button>

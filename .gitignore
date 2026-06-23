@@ -35,3 +35,6 @@ ios/
 *.tsbuildinfo
 .vercel
 test*.md
+
+.vercel
+.env*.local

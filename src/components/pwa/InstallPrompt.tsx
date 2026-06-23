@@ -21,8 +21,13 @@ export function InstallPrompt() {
             <div className="flex-1">
               <p className="text-sm font-medium">Use Safari to Install</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Firefox on iOS doesn't support app installation. Please open this page in Safari to add it to your home screen.
+                To install NPP Scheduling Portal:
               </p>
+              <ol className="text-xs text-muted-foreground mt-1 list-decimal list-inside space-y-1">
+                <li>Open in Safari</li>
+                <li>Tap Share</li>
+                <li>Tap Add to Home Screen</li>
+              </ol>
             </div>
             <Button
               variant="ghost"

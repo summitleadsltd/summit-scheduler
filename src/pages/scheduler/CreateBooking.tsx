@@ -115,13 +115,12 @@ export function CreateBooking() {
     }
   };
 
-  // Step 2: Find best slots
+  // Step 2: Find best slots (default 60 min duration)
   const findSlots = async () => {
     if (!geocodedAddress) return;
     setSearching(true);
     try {
-      const customerData = getCustomerValues();
-      const bestSlots = await findBestSlots(geocodedAddress.lat, geocodedAddress.lng, customerData.duration || 60);
+      const bestSlots = await findBestSlots(geocodedAddress.lat, geocodedAddress.lng, 60);
       if (bestSlots.length === 0) {
         toast.error('No available slots found. Try adjusting the duration or check back later.');
         return;
@@ -511,12 +510,12 @@ export function CreateBooking() {
     );
   }
 
-  // Step 2: Service type and duration
+  // Step 2: Find best slots
   if (step === 2) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Service Details</h1>
+          <h1 className="text-2xl font-bold">Find Available Slots</h1>
           <Button variant="outline" onClick={goBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -534,36 +533,14 @@ export function CreateBooking() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Appointment Type & Duration
-            </CardTitle>
+            <CardTitle className="text-lg">Find Best Available Slots</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Appointment Type</Label>
-              <Select onValueChange={(v: unknown) => setCustomerValue('appointment_type', v as string)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="installation">Installation</SelectItem>
-                  <SelectItem value="repair">Repair</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="inspection">Inspection</SelectItem>
-                  <SelectItem value="consultation">Consultation</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Duration (minutes)</Label>
-              <Input
-                type="number"
-                {...registerCustomer('duration', { valueAsNumber: true })}
-              />
-            </div>
+            <p className="text-sm text-muted-foreground">
+              We'll calculate the best available slots based on technician availability, travel time, and distance.
+            </p>
             <Button onClick={findSlots} size="lg" className="w-full" disabled={searching}>
-              {searching ? 'Finding Best Slots...' : 'Find Available Slots'}
+              {searching ? 'Finding Best Slots...' : 'Find Best Available Slots'}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </CardContent>

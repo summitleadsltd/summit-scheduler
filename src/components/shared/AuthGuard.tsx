@@ -5,9 +5,10 @@ import type { UserRole } from '@/types/database';
 interface AuthGuardProps {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
+  requireAllRoles?: boolean;
 }
 
-export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
+export function AuthGuard({ children, allowedRoles, requireAllRoles = false }: AuthGuardProps) {
   const { profile, initialized } = useAuthStore();
 
   if (!initialized) {
@@ -22,16 +23,22 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    const defaultRoute =
-      profile.role === 'admin'
-        ? '/admin/dashboard'
-        : profile.role === 'manager'
-          ? '/manager/dashboard'
-          : profile.role === 'scheduler'
-            ? '/scheduler/dashboard'
-            : '/technician/dashboard';
-    return <Navigate to={defaultRoute} replace />;
+  if (allowedRoles) {
+    const hasAccess = requireAllRoles
+      ? allowedRoles.every(role => profile.role === role)
+      : allowedRoles.includes(profile.role);
+    
+    if (!hasAccess) {
+      const defaultRoute =
+        profile.role === 'admin'
+          ? '/admin/dashboard'
+          : profile.role === 'manager'
+            ? '/manager/dashboard'
+            : profile.role === 'scheduler'
+              ? '/scheduler/dashboard'
+              : '/technician/dashboard';
+      return <Navigate to={defaultRoute} replace />;
+    }
   }
 
   return <>{children}</>;

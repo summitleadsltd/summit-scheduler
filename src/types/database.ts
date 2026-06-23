@@ -11,12 +11,6 @@ export interface User {
   role: UserRole;
   phone?: string;
   active: boolean;
-  google_account_id?: string;
-  google_calendar_id?: string;
-  google_access_token?: string;
-  google_refresh_token?: string;
-  google_token_expires_at?: string;
-  calendar_connected: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -54,34 +48,12 @@ export interface Appointment {
   appointment_type: AppointmentType;
   notes: string;
   created_by: string;
-  google_calendar_event_id?: string;
-  google_calendar_id?: string;
   created_at: string;
   updated_at: string;
   // joined fields
   customer?: Customer;
   technician?: User;
   address?: Address;
-}
-
-export interface CalendarSyncLog {
-  id: string;
-  user_id: string;
-  calendar_event_id?: string;
-  action: 'create' | 'update' | 'delete' | 'sync' | 'token_refresh';
-  status: 'success' | 'failed' | 'pending';
-  details?: string;
-  created_at: string;
-}
-
-export interface GoogleCalendarEvent {
-  id: string;
-  summary: string;
-  description?: string;
-  location?: string;
-  start: { dateTime: string; timeZone: string };
-  end: { dateTime: string; timeZone: string };
-  status?: string;
 }
 
 export interface AvailabilityBlock {
