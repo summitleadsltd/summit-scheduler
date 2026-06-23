@@ -11,6 +11,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+// Validate required Firebase config for messaging
+if (!import.meta.env.VITE_FIREBASE_PROJECT_ID || !import.meta.env.VITE_FIREBASE_APP_ID) {
+  console.warn('Firebase configuration incomplete. Push notifications will be disabled.');
+}
+
 let messaging: Messaging | null = null;
 
 async function getMessagingInstance(): Promise<Messaging | null> {
