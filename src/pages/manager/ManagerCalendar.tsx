@@ -10,7 +10,6 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import type { EventInput, EventClickArg } from '@fullcalendar/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SYSTEM_TZ } from '@/lib/timezone';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AppointmentStatusBadge } from '@/components/shared/AppointmentStatusBadge';
 import {
@@ -85,13 +84,12 @@ export function ManagerCalendar() {
     const availabilityEvents: EventInput[] = availabilityBlocks.map((block) => {
       return {
         id: `avail-${block.id}`,
-        title: `🚫 Unavailable (${block.technician?.name || 'Unknown'}) - ${block.reason}`,
+        title: 'Unavailable',
         start: block.start_time,
         end: block.end_time,
-        backgroundColor: '#ef4444',
-        borderColor: '#ef4444',
-        textColor: '#ffffff',
-        extendedProps: { type: 'availability', technicianId: block.technician_id },
+        display: 'background',
+        color: '#ef4444',
+        extendedProps: { type: 'availability', technicianId: block.technician_id, technicianName: block.technician?.name, reason: block.reason },
       };
     });
 
@@ -267,7 +265,6 @@ export function ManagerCalendar() {
             allDaySlot={false}
             hiddenDays={[0, 6]}
             businessHours={{ daysOfWeek: [1, 2, 3, 4, 5], startTime: '09:00', endTime: '19:00' }}
-            timeZone={SYSTEM_TZ}
             height="auto"
           />
         </CardContent>

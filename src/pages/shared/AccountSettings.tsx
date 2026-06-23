@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/authStore';
-import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
+// import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
@@ -149,7 +149,7 @@ export function AccountSettings() {
       </Card>
 
       {/* Google Calendar Integration (technicians) */}
-      {profile?.role === 'technician' && <GoogleCalendarSettings />}
+      {/* {profile?.role === 'technician' && <GoogleCalendarSettings />} */}
     </div>
   );
 }

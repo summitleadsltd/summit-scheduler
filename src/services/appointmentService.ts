@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { toEST, formatEST } from '@/lib/timezone';
 import { createAppointmentEvent, updateAppointmentEvent, deleteAppointmentEvent } from './googleCalendarService';
+import { getAvailabilityBlocks } from './technicianService';
 import {
   notifyAppointmentCreatedAll,
   notifyAppointmentUpdatedAll,
@@ -8,6 +9,57 @@ import {
   notifyAppointmentStatusChangedAll,
 } from './notificationService';
 import type { Appointment, AppointmentStatus } from '@/types/database';
+
+// Check if a time slot is available for a technician
+export async function checkTechnicianAvailability(
+  technicianId: string,
+  startTime: string,
+  endTime: string
+): Promise<{ available: boolean; reason?: string }> {
+  // Check for existing appointments
+  const { data: existingAppointments } = await supabase
+    .from('ss_appointments')
+    .select('*')
+    .eq('technician_id', technicianId)
+    .neq('status', 'cancelled')
+    .or(`and(start_time.lt.${endTime},end_time.gt.${startTime})`);
+
+  if (existingAppointments && existingAppointments.length > 0) {
+    return { available: false, reason: 'Technician already has an appointment during this time' };
+  }
+
+  // Check for availability blocks
+  const availabilityBlocks = await getAvailabilityBlocks(technicianId);
+  const hasConflict = availabilityBlocks.some((block) => {
+    return (
+      (new Date(block.start_time) < new Date(endTime) &&
+       new Date(block.end_time) > new Date(startTime))
+    );
+  });
+
+  if (hasConflict) {
+    return { available: false, reason: 'Technician has marked this time as unavailable' };
+  }
+
+  // Check working hours (9 AM - 7 PM)
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  const startHour = start.getHours();
+  const endHour = end.getHours();
+  const dayOfWeek = start.getDay();
+
+  // Weekend check
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    return { available: false, reason: 'Appointments can only be scheduled on weekdays' };
+  }
+
+  // Business hours check
+  if (startHour < 9 || endHour > 19) {
+    return { available: false, reason: 'Appointments must be between 9 AM and 7 PM' };
+  }
+
+  return { available: true };
+}
 
 export async function getAppointments(filters?: {
   technician_id?: string;
@@ -68,6 +120,17 @@ export async function createAppointment(appointment: {
   notes?: string;
   created_by: string;
 }) {
+  // Check availability before creating appointment
+  const availabilityCheck = await checkTechnicianAvailability(
+    appointment.technician_id,
+    appointment.start_time,
+    appointment.end_time
+  );
+
+  if (!availabilityCheck.available) {
+    throw new Error(availabilityCheck.reason || 'Time slot is not available');
+  }
+
   const { data, error } = await supabase
     .from('ss_appointments')
     .insert({ ...appointment, status: 'scheduled' })

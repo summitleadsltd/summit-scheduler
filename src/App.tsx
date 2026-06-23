@@ -7,12 +7,12 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { usePWAStore } from '@/stores/pwaStore';
 import { SplashScreen } from '@/components/pwa/SplashScreen';
-import { onForegroundMessage } from '@/lib/firebase';
+// import { onForegroundMessage } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 // Auth
 import { LoginPage } from '@/pages/auth/LoginPage';
-import { GoogleCallback } from '@/pages/auth/GoogleCallback';
+// import { GoogleCallback } from '@/pages/auth/GoogleCallback';
 
 // Technician
 import { TechnicianDashboard } from '@/pages/technician/TechnicianDashboard';
@@ -63,7 +63,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/auth/google/callback" element={<GoogleCallback />} />
+      {/* <Route path="/auth/google/callback" element={<GoogleCallback />} /> */}
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
 
@@ -187,11 +187,11 @@ export default function App() {
   }, [setDeferredPrompt]);
 
   useEffect(() => {
-    onForegroundMessage((payload) => {
-      toast(payload.title ?? 'Notification', {
-        description: payload.body,
-      });
-    });
+    // onForegroundMessage((payload) => {
+    //   toast(payload.title ?? 'Notification', {
+    //     description: payload.body,
+    //   });
+    // });
   }, []);
 
   if (!initialized) {

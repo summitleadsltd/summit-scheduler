@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
+// import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
 import { toast } from 'sonner';
 
 interface Settings {
@@ -156,7 +156,7 @@ export function SettingsPage() {
       </Button>
 
       {/* Google Calendar Integration */}
-      <GoogleCalendarSettings />
+      {/* <GoogleCalendarSettings /> */}
     </div>
   );
 }

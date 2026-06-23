@@ -31,7 +31,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatEST } from '@/lib/timezone';
-import { SYSTEM_TZ } from '@/lib/timezone';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { addDays } from 'date-fns';
@@ -124,13 +123,12 @@ export function TechnicianCalendar() {
     // Map availability blocks to calendar events (show all technicians' blocks)
     const availabilityEvents: EventInput[] = availabilityBlocks.map((block) => ({
       id: `avail-${block.id}`,
-      title: `🚫 ${block.technician?.name || 'Unknown'} - ${block.reason}`,
+      title: 'Unavailable',
       start: block.start_time,
       end: block.end_time,
-      backgroundColor: block.technician_id === profile.id ? '#ef4444' : '#f97316',
-      borderColor: block.technician_id === profile.id ? '#ef4444' : '#f97316',
-      textColor: '#ffffff',
-      extendedProps: { type: 'availability', technicianId: block.technician_id },
+      display: 'background',
+      color: '#ef4444',
+      extendedProps: { type: 'availability', technicianId: block.technician_id, technicianName: block.technician?.name, reason: block.reason },
     }));
 
     setEvents([...appointmentEvents, ...availabilityEvents]);
@@ -401,7 +399,6 @@ export function TechnicianCalendar() {
             allDaySlot={false}
             height="auto"
             expandRows={true}
-            timeZone={SYSTEM_TZ}
           />
         </CardContent>
       </Card>
@@ -702,14 +699,11 @@ export function TechnicianCalendar() {
 }
 
 function toLocalDatetimeString(date: Date): string {
-  // Convert to EST timezone before formatting
-  const estDate = date.toLocaleString('en-US', { timeZone: 'America/New_York' });
-  const estDateObj = new Date(estDate);
-  
-  const y = estDateObj.getFullYear();
-  const m = String(estDateObj.getMonth() + 1).padStart(2, '0');
-  const d = String(estDateObj.getDate()).padStart(2, '0');
-  const h = String(estDateObj.getHours()).padStart(2, '0');
-  const min = String(estDateObj.getMinutes()).padStart(2, '0');
+  // No timezone conversion - use time as-is for fixed business slots
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
   return `${y}-${m}-${d}T${h}:${min}`;
 }
