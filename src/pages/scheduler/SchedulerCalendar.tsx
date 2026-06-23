@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getAppointments } from '@/services/appointmentService';
 import { getAllAvailabilityBlocks } from '@/services/technicianService';
+import { supabase } from '@/lib/supabase';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -67,6 +68,52 @@ export function SchedulerCalendar() {
 
   useEffect(() => {
     loadAppointments();
+  }, [loadAppointments]);
+
+  // Set up realtime subscription for availability blocks
+  useEffect(() => {
+    const subscription = supabase
+      .channel('scheduler-availability-blocks-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ss_availability_blocks',
+        },
+        () => {
+          // Reload appointments and availability blocks when changes occur
+          loadAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loadAppointments]);
+
+  // Set up realtime subscription for appointments
+  useEffect(() => {
+    const subscription = supabase
+      .channel('scheduler-appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ss_appointments',
+        },
+        () => {
+          // Reload appointments when changes occur
+          loadAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [loadAppointments]);
 
   const handleEventClick = (info: EventClickArg) => {

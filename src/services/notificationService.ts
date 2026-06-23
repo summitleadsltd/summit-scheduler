@@ -16,6 +16,46 @@ export async function createNotification(params: {
   if (error) throw error;
 }
 
+export async function notifyMultipleUsers(params: {
+  user_ids: string[];
+  title: string;
+  body: string;
+  type: string;
+  reference_id?: string;
+}) {
+  const notifications = params.user_ids.map((user_id) => ({
+    user_id,
+    title: params.title,
+    body: params.body,
+    type: params.type,
+    reference_id: params.reference_id,
+    read: false,
+  }));
+
+  const { error } = await supabase.from('ss_notifications').insert(notifications);
+  if (error) throw error;
+}
+
+export async function getManagementUsers() {
+  const { data, error } = await supabase
+    .from('ss_users')
+    .select('id')
+    .in('role', ['admin', 'manager', 'scheduler'])
+    .eq('active', true);
+  if (error) throw error;
+  return data.map((u) => u.id);
+}
+
+export async function getAllTechnicians() {
+  const { data, error } = await supabase
+    .from('ss_users')
+    .select('id')
+    .eq('role', 'technician')
+    .eq('active', true);
+  if (error) throw error;
+  return data.map((u) => u.id);
+}
+
 export async function notifyNewAppointment(
   technicianId: string,
   customerName: string,
@@ -56,5 +96,42 @@ export async function notifyAppointmentCancelled(
     body: `Your appointment with ${customerName} has been cancelled`,
     type: 'appointment_cancelled',
     reference_id: appointmentId,
+  });
+}
+
+export async function notifyAvailabilityBlockCreated(
+  technicianName: string,
+  startTime: string,
+  endTime: string,
+  reason: string,
+) {
+  const managementUsers = await getManagementUsers();
+  const allTechnicians = await getAllTechnicians();
+
+  const allUserIds = [...new Set([...managementUsers, ...allTechnicians])];
+
+  await notifyMultipleUsers({
+    user_ids: allUserIds,
+    title: 'Availability Block Added',
+    body: `${technicianName} is unavailable from ${startTime} to ${endTime} (${reason})`,
+    type: 'availability_block_created',
+  });
+}
+
+export async function notifyAvailabilityBlockDeleted(
+  technicianName: string,
+  startTime: string,
+  endTime: string,
+) {
+  const managementUsers = await getManagementUsers();
+  const allTechnicians = await getAllTechnicians();
+
+  const allUserIds = [...new Set([...managementUsers, ...allTechnicians])];
+
+  await notifyMultipleUsers({
+    user_ids: allUserIds,
+    title: 'Availability Block Removed',
+    body: `${technicianName} is now available from ${startTime} to ${endTime}`,
+    type: 'availability_block_deleted',
   });
 }

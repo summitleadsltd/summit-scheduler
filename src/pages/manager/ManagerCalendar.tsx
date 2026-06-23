@@ -141,6 +141,52 @@ export function ManagerCalendar() {
     loadData();
   }, [loadData]);
 
+  // Set up realtime subscription for availability blocks
+  useEffect(() => {
+    const subscription = supabase
+      .channel('manager-availability-blocks-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ss_availability_blocks',
+        },
+        () => {
+          // Reload data when availability blocks change
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loadData]);
+
+  // Set up realtime subscription for appointments
+  useEffect(() => {
+    const subscription = supabase
+      .channel('manager-appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ss_appointments',
+        },
+        () => {
+          // Reload data when appointments change
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loadData]);
+
   const filteredEvents = filterTechId === 'all'
     ? events
     : events.filter((e) => e.extendedProps?.technicianId === filterTechId);

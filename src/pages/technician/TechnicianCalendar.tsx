@@ -8,7 +8,8 @@ import {
   updateAppointmentStatus,
 } from '@/services/appointmentService';
 import { getCustomers, createCustomer, createAddress } from '@/services/customerService';
-import { getAllAvailabilityBlocks } from '@/services/technicianService';
+import { getAllAvailabilityBlocks, getTechnicians } from '@/services/technicianService';
+import { supabase } from '@/lib/supabase';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -34,7 +35,7 @@ import { SYSTEM_TZ } from '@/lib/timezone';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { addDays } from 'date-fns';
-import type { Appointment, AppointmentType, AppointmentStatus, Customer, Address } from '@/types/database';
+import type { Appointment, AppointmentType, AppointmentStatus, Customer, Address, User } from '@/types/database';
 
 const statusColors: Record<string, string> = {
   scheduled: '#3b82f6',
@@ -52,6 +53,8 @@ export function TechnicianCalendar() {
   const [events, setEvents] = useState<EventInput[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [customers, setCustomers] = useState<(Customer & { addresses: Address[] })[]>([]);
+  const [technicians, setTechnicians] = useState<User[]>([]);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>('all');
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -90,7 +93,14 @@ export function TechnicianCalendar() {
 
   const loadAppointments = useCallback(async () => {
     if (!profile) return;
-    const data = await getAppointments({ technician_id: profile.id });
+    
+    // Load technicians
+    const techs = await getTechnicians();
+    setTechnicians(techs);
+
+    // Load appointments based on selected technician
+    const technicianId = selectedTechnicianId === 'all' ? undefined : selectedTechnicianId;
+    const data = await getAppointments(technicianId ? { technician_id: technicianId } : {});
     setAppointments(data);
 
     // Load all availability blocks (so technicians can see each other's unavailability)
@@ -124,7 +134,7 @@ export function TechnicianCalendar() {
     }));
 
     setEvents([...appointmentEvents, ...availabilityEvents]);
-  }, [profile]);
+  }, [profile, selectedTechnicianId]);
 
   const loadCustomers = useCallback(async () => {
     try {
@@ -139,6 +149,52 @@ export function TechnicianCalendar() {
     loadAppointments();
     loadCustomers();
   }, [loadAppointments, loadCustomers]);
+
+  // Set up realtime subscription for availability blocks
+  useEffect(() => {
+    const subscription = supabase
+      .channel('availability-blocks-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ss_availability_blocks',
+        },
+        () => {
+          // Reload appointments and availability blocks when changes occur
+          loadAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loadAppointments]);
+
+  // Set up realtime subscription for appointments
+  useEffect(() => {
+    const subscription = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ss_appointments',
+        },
+        () => {
+          // Reload appointments when changes occur
+          loadAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loadAppointments]);
 
   const handleEventClick = (info: EventClickArg) => {
     const apt = appointments.find((a) => a.id === info.event.id);
@@ -299,12 +355,29 @@ export function TechnicianCalendar() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">My Calendar</h1>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Appointment
-        </Button>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold">Calendar</h1>
+          <Select value={selectedTechnicianId} onValueChange={setSelectedTechnicianId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select technician" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Technicians</SelectItem>
+              {technicians.map((tech) => (
+                <SelectItem key={tech.id} value={tech.id}>
+                  {tech.name} {tech.id === profile?.id ? '(You)' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {selectedTechnicianId === 'all' || selectedTechnicianId === profile?.id ? (
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Appointment
+          </Button>
+        ) : null}
       </div>
 
       <Card>
@@ -319,8 +392,8 @@ export function TechnicianCalendar() {
             }}
             events={events}
             eventClick={handleEventClick}
-            selectable={true}
-            select={handleDateSelect}
+            selectable={selectedTechnicianId === 'all' || selectedTechnicianId === profile?.id}
+            select={selectedTechnicianId === 'all' || selectedTechnicianId === profile?.id ? handleDateSelect : undefined}
             slotMinTime="09:00:00"
             slotMaxTime="19:00:00"
             hiddenDays={[0, 6]}

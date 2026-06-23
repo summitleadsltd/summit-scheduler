@@ -5,6 +5,10 @@ import {
   createAvailabilityBlock,
   deleteAvailabilityBlock,
 } from '@/services/technicianService';
+import {
+  notifyAvailabilityBlockCreated,
+  notifyAvailabilityBlockDeleted,
+} from '@/services/notificationService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
 import { formatEST } from '@/lib/timezone';
+import { toast } from 'sonner';
 import type { AvailabilityBlock } from '@/types/database';
 
 export function TechnicianAvailability() {
@@ -70,14 +75,36 @@ export function TechnicianAvailability() {
       end_time: new Date(estEndDate).toISOString(),
       reason: form.reason,
     });
+
+    // Notify all management users and technicians
+    await notifyAvailabilityBlockCreated(
+      profile.name,
+      formatEST(new Date(estStartDate), 'MMM d, yyyy h:mm a'),
+      formatEST(new Date(estEndDate), 'MMM d, yyyy h:mm a'),
+      form.reason
+    );
+
     setDialogOpen(false);
     setForm({ start_date: '', start_time: '09:00', end_date: '', end_time: '19:00', reason: 'personal' });
     loadBlocks();
+    toast.success('Availability block added and notifications sent');
   };
 
   const handleDelete = async (id: string) => {
+    const blockToDelete = blocks.find((b) => b.id === id);
+    if (!blockToDelete) return;
+
     await deleteAvailabilityBlock(id);
+
+    // Notify all management users and technicians
+    await notifyAvailabilityBlockDeleted(
+      profile.name,
+      formatEST(blockToDelete.start_time, 'MMM d, yyyy h:mm a'),
+      formatEST(blockToDelete.end_time, 'MMM d, yyyy h:mm a')
+    );
+
     loadBlocks();
+    toast.success('Availability block removed and notifications sent');
   };
 
   if (loading) {
